@@ -1,3 +1,5 @@
-# Verified source audit
+# Verified source audit — v5.1.4
 
-The conversion was checked against the supplied `INCENTIFY_Billing_v2.11_Rebranded` portable application and its recovered source baseline. The web build retains the same primary modules and layout. Electron-only responsibilities are replaced with browser/server equivalents rather than removed. The v5.1 ERP page is derived from the previously converted v5 UI which preserves the v2.11 markup and adds server-controlled invoice sequencing.
+The web conversion remains based on the supplied `INCENTIFY_Billing_v2.11_Rebranded` application and its recovered source baseline. The primary ERP functionality and layout are retained while Electron-only responsibilities are replaced with browser/server equivalents.
+
+v5.1.4 contains the working nested Apps Script bridge transport, the SALES RBAC restrictions introduced for v5.1.2, and the corrected current production Apps Script endpoint. The frontend is static GitHub Pages content and has no Electron or npm runtime dependency.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>INCENTIFY — Private ERP V5.1</title>
+<title>INCENTIFY — Private ERP V5.1.4</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -1210,9 +1210,77 @@ function logActivity(type, message, detail) {
   // Note: caller is responsible for persistDB() — no double-save here
 }
 
+// ── ROLE ACCESS ───────────────────────────────────────────
+const SALES_ALLOWED_PAGES = new Set(['invoice','invoices','payments']);
+let salesPaymentFilter='all';
+let salesPaymentQuery='';
+function currentErpRole(){
+  try{return String(window.INCENTIFY_WEB?.getUser?.()?.role||'').toUpperCase();}catch(_){return '';}
+}
+function isSalesUser(){return currentErpRole()==='SALES';}
+function applyRoleAccess(){
+  if(!isSalesUser())return;
+  document.body.dataset.erpRole='SALES';
+  document.querySelectorAll('.tb-tab').forEach(tab=>{
+    const m=String(tab.getAttribute('onclick')||'').match(/showPage\('([^']+)'\)/);
+    if(m&&!SALES_ALLOWED_PAGES.has(m[1]))tab.style.display='none';
+    if(m&&m[1]==='invoice')tab.innerHTML='🧾 Create Invoice';
+    if(m&&m[1]==='invoices')tab.innerHTML='📋 Manage Invoices';
+    if(m&&m[1]==='payments')tab.innerHTML='💳 Payment Tracking';
+  });
+  const paymentPage=document.getElementById('page-payments');
+  if(paymentPage){
+    const title=paymentPage.querySelector('.page-title');if(title)title.textContent='Payment Tracking';
+    const sub=paymentPage.querySelector('.page-subtitle');if(sub)sub.textContent='Invoice collections only · Paid, partial and outstanding balances';
+    const bar=paymentPage.querySelector('.filter-bar');
+    if(bar)bar.innerHTML=`<button class="filter-btn active" onclick="filterSalesPayments('all',this)">All</button>
+      <button class="filter-btn" onclick="filterSalesPayments('unpaid',this)">⏳ Unpaid</button>
+      <button class="filter-btn" onclick="filterSalesPayments('partial',this)">◑ Partial</button>
+      <button class="filter-btn" onclick="filterSalesPayments('paid',this)">✓ Paid</button>
+      <button class="filter-btn" onclick="filterSalesPayments('overdue',this)">🚨 Overdue</button>
+      <input type="text" class="search-field" placeholder="🔍 Search invoice or customer..." oninput="searchSalesPayments(this.value)">`;
+    const head=paymentPage.querySelector('thead');
+    if(head)head.innerHTML='<tr><th>Invoice #</th><th>Customer</th><th>Total</th><th>Paid</th><th>Balance</th><th>Due Date</th><th>Status</th><th>Action</th></tr>';
+  }
+  document.querySelectorAll('#page-invoice .form-section').forEach(section=>{
+    if(section.textContent.includes('Online Payment — Razorpay'))section.style.display='none';
+  });
+}
+function salesPaymentState(inv){
+  const total=Number(inv.grand||0),paid=Math.max(0,Number(inv.amountPaid||0)),balance=Math.max(0,Number(inv.balanceDue==null?total-paid:inv.balanceDue));
+  if(balance<=0||inv.status==='paid')return'paid';
+  if(paid>0||inv.status==='partial')return'partial';
+  const due=inv.due?new Date(inv.due+'T23:59:59'):null;
+  if(due&&due.getTime()<Date.now())return'overdue';
+  return'unpaid';
+}
+function renderSalesPaymentTracking(){
+  if(!isSalesUser())return;
+  let data=[...(DB.invoices||[])].sort((a,b)=>new Date(b.updatedAt||b.createdAt||0)-new Date(a.updatedAt||a.createdAt||0));
+  if(salesPaymentFilter!=='all')data=data.filter(i=>salesPaymentState(i)===salesPaymentFilter);
+  if(salesPaymentQuery){
+    const q=salesPaymentQuery.toLowerCase();
+    data=data.filter(i=>[i.number,i.customer,i.customerEmail,i.customerPhone].some(v=>String(v||'').toLowerCase().includes(q)));
+  }
+  set('pay-body',data.map(i=>{
+    const total=Number(i.grand||0),paid=Math.max(0,Number(i.amountPaid||0)),balance=Math.max(0,Number(i.balanceDue==null?total-paid:i.balanceDue));
+    const state=salesPaymentState(i);
+    const pill=state==='overdue'?'<span class="status-pill status-overdue">🚨 Overdue</span>':invPill(state==='partial'?'partial':state==='paid'?'paid':'unpaid');
+    return `<tr><td><strong>${esc(i.number||'—')}</strong></td><td>${esc(i.customer||'—')}</td><td class="amount-cell">₹${fmt(total)}</td><td class="amount-cell" style="color:var(--green)">₹${fmt(paid)}</td><td class="amount-cell">₹${fmt(balance)}</td><td>${esc(i.due||'—')}</td><td>${pill}</td><td><button class="action-btn" style="background:#eef0ff;color:#4f5bff" data-action="inv-edit" data-id="${i.id}">Open</button></td></tr>`;
+  }).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px;color:#aaa">No invoice payments found.</td></tr>');
+}
+function filterSalesPayments(filter,el){
+  salesPaymentFilter=filter||'all';
+  document.querySelectorAll('#page-payments .filter-btn').forEach(b=>b.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderSalesPaymentTracking();
+}
+function searchSalesPayments(q){salesPaymentQuery=String(q||'');renderSalesPaymentTracking();}
+
 // ── NAV ──────────────────────────────────────────────────
 const PAGE_MAP = {dashboard:0,invoice:1,invoices:2,payments:3,gateway:4,customers:5,history:6,finance:7,settings:8};
 function showPage(id) {
+  if(isSalesUser()&&!SALES_ALLOWED_PAGES.has(id)){toast('🔒 This section is not available for Sales accounts.',true);id='invoice';}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tb-tab').forEach(t=>t.classList.remove('active'));
   const page=document.getElementById('page-'+id);if(!page)return;
@@ -1553,6 +1621,7 @@ function loadInvoiceIntoForm(inv) {
 
 // ── PAYMENTS ─────────────────────────────────────────────
 function renderPayments(filter,query){
+  if(isSalesUser()){renderSalesPaymentTracking();return;}
   filter=filter||currentBillFilter;
   const today=new Date(); today.setHours(0,0,0,0);
   let data=[...DB.bills].sort((a,b)=>new Date(a.due)-new Date(b.due));
@@ -2631,6 +2700,7 @@ function invoiceEarningNumber(inv){
   return 'ERN-'+(suffix||String((DB.earnings||[]).length+1).padStart(3,'0'));
 }
 function upsertInvoiceEarning(inv){
+  if(isSalesUser())return false;
   if(!inv)return false;
   if(!Array.isArray(DB.earnings))DB.earnings=[];
   const linked=DB.earnings.filter(e=>e.type==='invoice'&&e.invoiceId===inv.id);
@@ -2744,8 +2814,9 @@ function renderCurrentInvoicePaymentSummary(){
   const el=document.getElementById('invoice-payment-summary');if(!el)return;const inv=invoiceByCurrentForm();if(!inv){el.innerHTML='Save the invoice, then generate a secure Razorpay Payment Link.';return;}const req=activeRequestForInvoice(inv.id);const paid=Number(inv.amountPaid||0),balance=Math.max(0,Number(inv.grand||0)-paid);if(!req){el.innerHTML=`<strong>${esc(inv.number)}</strong> · Outstanding ₹${fmt(balance)}<br>No Razorpay link has been generated.`;return;}el.innerHTML=`<strong>${esc(inv.number)}</strong> · ${gatewayPill(req.status)}<br>Collected ₹${fmt(paid)} · Balance ₹${fmt(balance)}<br><span class="gateway-link" onclick="openPaymentLink('${req.razorpay_payment_link_id}')">${esc(req.short_url||'')}</span>`;
 }
 function renderInvList(){
+  const sales=isSalesUser();
   let data=[...DB.invoices].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));if(invListFilter!=='all')data=data.filter(i=>i.status===invListFilter);if(invListQuery){const q=invListQuery.toLowerCase();data=data.filter(i=>String(i.number).toLowerCase().includes(q)||String(i.customer).toLowerCase().includes(q)||String(i.product||'').toLowerCase().includes(q));}
-  set('inv-list-body',data.map(i=>{const req=activeRequestForInvoice(i.id);return `<tr><td><strong>${esc(i.number)}</strong></td><td>${esc(i.customer)}</td><td style="font-size:10.5px;color:#888">${esc(i.product||'—')}</td><td style="font-size:10.5px">${i.issued||'—'}</td><td style="font-size:10.5px">${i.due||'—'}</td><td class="amount-cell">₹${fmt(i.grand)}</td><td>${invPill(i.status)}${req?`<div style="margin-top:3px">${gatewayPill(req.status)}</div>`:''}</td><td class="gateway-table-actions">${i.status!=='paid'?`<button class="action-btn btn-mark-paid" data-action="inv-paid" data-id="${i.id}">✓ Paid</button>`:`<button class="action-btn btn-mark-unpaid" data-action="inv-unpaid" data-id="${i.id}">↺ Unpaid</button>`}<button class="action-btn" style="background:#eaf6ee;color:var(--green)" onclick="openPaymentLinkModal('${i.id}')">🔗 Pay Link</button><button class="action-btn" style="background:#eef0ff;color:#4f5bff" data-action="inv-edit" data-id="${i.id}">✏️ Edit</button><button class="action-btn btn-secondary" style="background:#f9faf8;color:var(--green-dark);border:1px solid var(--border)" data-action="inv-pdf" data-id="${i.id}">📄 PDF</button><button class="action-btn btn-delete" data-action="inv-list-delete" data-id="${i.id}">🗑</button></td></tr>`;}).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px;color:#aaa">No invoices found.</td></tr>');
+  set('inv-list-body',data.map(i=>{const req=sales?null:activeRequestForInvoice(i.id);return `<tr><td><strong>${esc(i.number)}</strong></td><td>${esc(i.customer)}</td><td style="font-size:10.5px;color:#888">${esc(i.product||'—')}</td><td style="font-size:10.5px">${i.issued||'—'}</td><td style="font-size:10.5px">${i.due||'—'}</td><td class="amount-cell">₹${fmt(i.grand)}</td><td>${invPill(i.status)}${req?`<div style="margin-top:3px">${gatewayPill(req.status)}</div>`:''}</td><td class="gateway-table-actions">${i.status!=='paid'?`<button class="action-btn btn-mark-paid" data-action="inv-paid" data-id="${i.id}">✓ Paid</button>`:`<button class="action-btn btn-mark-unpaid" data-action="inv-unpaid" data-id="${i.id}">↺ Unpaid</button>`}${sales?'':`<button class="action-btn" style="background:#eaf6ee;color:var(--green)" onclick="openPaymentLinkModal('${i.id}')">🔗 Pay Link</button>`}<button class="action-btn" style="background:#eef0ff;color:#4f5bff" data-action="inv-edit" data-id="${i.id}">✏️ Edit</button><button class="action-btn btn-secondary" style="background:#f9faf8;color:var(--green-dark);border:1px solid var(--border)" data-action="inv-pdf" data-id="${i.id}">📄 PDF</button>${sales?'':`<button class="action-btn btn-delete" data-action="inv-list-delete" data-id="${i.id}">🗑</button>`}</td></tr>`;}).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px;color:#aaa">No invoices found.</td></tr>');
 }
 
 function eligibleInvoices(){return DB.invoices.filter(i=>i.status!=='paid'||Number(i.balanceDue||i.grand||0)>0).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));}
@@ -2823,9 +2894,14 @@ async function exportGatewayReceipt(id){
 
 // Startup override: preserves all existing modules and performs a non-blocking Razorpay sync.
 async function init(){
-  await loadDB();bindCloudUpdates();applyBusinessSettings();updateDate();setInterval(updateDate,60000);
+  await loadDB();bindCloudUpdates();applyRoleAccess();applyBusinessSettings();updateDate();setInterval(updateDate,60000);
   const today=new Date().toISOString().split('T')[0];const due30=new Date();due30.setDate(due30.getDate()+30);set('inv-issued',today);set('inv-due',due30.toISOString().split('T')[0]);set('tax-rate',String(getBusinessSettings().defaultTaxRate));
-  bumpInvoiceNumber();addLineItem();generateInvoice();renderDashboard();refreshCustSelect();renderCurrentInvoicePaymentSummary();
+  bumpInvoiceNumber();addLineItem();generateInvoice();refreshCustSelect();renderCurrentInvoicePaymentSummary();
+  if(isSalesUser()){
+    renderInvList();renderSalesPaymentTracking();showPage('invoice');
+    return;
+  }
+  renderDashboard();
   if(isElectron){
     setInterval(()=>eAPI.checkNotifications(),60*60*1000);
     setTimeout(()=>syncGatewayData(false,false),2500);
@@ -2856,6 +2932,8 @@ window.searchCustomers   = searchCustomers;
 // Payments
 window.filterBills       = filterBills;
 window.searchBills       = searchBills;
+window.filterSalesPayments = filterSalesPayments;
+window.searchSalesPayments = searchSalesPayments;
 window.markBillPaid      = markBillPaid;
 window.markBillUnpaid    = markBillUnpaid;
 window.deleteBill        = deleteBill;

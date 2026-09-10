@@ -1,24 +1,47 @@
-const fs=require('fs'),path=require('path'),vm=require('vm');const root=path.resolve(__dirname,'..');let fail=0;function t(n,c){console.log((c?'PASS ':'FAIL ')+n);if(!c)fail++}
-const erp=fs.readFileSync(path.join(root,'erp.html'),'utf8'),login=fs.readFileSync(path.join(root,'index.html'),'utf8'),adapter=fs.readFileSync(path.join(root,'js/web-adapter.js'),'utf8'),bridge=fs.readFileSync(path.join(root,'js/bridge-client.js'),'utf8'),config=fs.readFileSync(path.join(root,'js/config.js'),'utf8'),auth=fs.readFileSync(path.join(root,'js/auth.js'),'utf8'),admin=fs.readFileSync(path.join(root,'admin.html'),'utf8');
-for(const file of ['js/config.js','js/bridge-client.js','js/auth.js','js/web-adapter.js']){try{new vm.Script(fs.readFileSync(path.join(root,file),'utf8'));t(file+' syntax parses',true)}catch(e){t(file+' syntax parses',false)}}
+const fs=require('fs'),path=require('path'),vm=require('vm');
+const root=path.resolve(__dirname,'..');
+const FRONTEND_VERSION='5.1.4';
+const BACKEND_URL='https://script.google.com/macros/s/AKfycbxJsQGoSpf3jVVSFZU0ta7Z46_82Fnj_cGHlgYs4YAPgW9pwD-cIWBJbz85T64P1WI/exec';
+let fail=0; function t(name,cond){console.log((cond?'PASS ':'FAIL ')+name);if(!cond)fail++;}
+function read(rel){return fs.readFileSync(path.join(root,rel),'utf8');}
+const erp=read('erp.html'),login=read('index.html'),admin=read('admin.html'),adapter=read('js/web-adapter.js'),bridge=read('js/bridge-client.js'),config=read('js/config.js'),auth=read('js/auth.js');
+for(const file of ['js/config.js','js/bridge-client.js','js/auth.js','js/web-adapter.js']){try{new vm.Script(read(file));t(file+' syntax parses',true)}catch(e){console.error(e.message);t(file+' syntax parses',false)}}
+for(const f of ['index.html','erp.html','admin.html','404.html','.nojekyll','assets/INCENTIFY_app_mark.png','assets/INCENTIFY_logo_web.png','assets/INCENTIFY_logo.png','js/config.js','js/bridge-client.js','js/auth.js','js/web-adapter.js']) t('required file '+f,fs.existsSync(path.join(root,f)));
 ['Dashboard','New Invoice','Invoices','Payments','Payment Gateway','Customers','History','Finance','P&L','Balance Sheet','Business Settings'].forEach(x=>t('ERP retains '+x,erp.includes(x)));
 t('separate login page comes first',login.includes('Secure sign in')&&login.includes('Approved email')&&!login.includes('page-dashboard'));
 t('approved email + 6-digit OTP flow',login.includes('requestOtp')&&login.includes('verifyOtp')&&login.includes('/^[0-9]{6}$/'));
 t('ERP requires authenticated bootstrap',adapter.includes("location.replace('index.html')")&&adapter.includes("A.call('bootstrap'"));
-t('web adapter loads before original ERP inline application',erp.indexOf('js/web-adapter.js')<erp.indexOf('// ── ASSETS'));
+t('web adapter loads before original ERP application',erp.indexOf('js/web-adapter.js')>=0&&erp.indexOf('js/web-adapter.js')<erp.indexOf('// ── ASSETS'));
 ['loadData','saveData','exportPDF','exportPaymentReceipt','exportExcel','exportFinanceReport','gatewayRequest','reserveInvoiceNumber','openExternal','copyText'].forEach(x=>t('web compatibility adapter '+x,adapter.includes(x+':')||adapter.includes(x+'(')));
 t('central invoice reservation retained',erp.includes('reserveInvoiceNumber')&&erp.includes('Cloud invoice number could not be reserved'));
 t('invoice print copies original ERP CSS',adapter.includes("querySelectorAll('style,link[rel=\"stylesheet\"]')"));
 t('finance PDF workflow retained',adapter.includes('financeHtml')&&adapter.includes('INCENTIFY Finance Report'));
-t('Apps Script URL configured',config.includes('script.google.com/macros/s/AKfycby1_'));
-t('nested-safe MessageChannel bridge transport used',bridge.includes('MessageChannel')||bridge.includes('event.ports')&&bridge.includes('this.port.postMessage'));
+t('frontend version is '+FRONTEND_VERSION,config.includes("VERSION: '"+FRONTEND_VERSION+"'"));
+t('production Apps Script API URL is exact',config.includes("API_URL: '"+BACKEND_URL+"'"));
+t('production bridge URL is exact',config.includes("BRIDGE_URL: '"+BACKEND_URL+'?bridge=1&v='+FRONTEND_VERSION+"'"));
+t('old Apps Script deployment family removed from runtime files',![login,erp,admin,adapter,bridge,config,auth].some(x=>x.includes('AKfycby1_')));
+t('nested-safe MessageChannel bridge transport used',(bridge.includes('MessageChannel')||bridge.includes('event.ports'))&&bridge.includes('this.port.postMessage'));
 t('runtime bridge channel nonce is used',bridge.includes('randomUUID')&&bridge.includes("'channel='+encodeURIComponent(this.channel)"));
-t('no direct google.script.run in GitHub frontend',![login,erp,adapter,bridge,config,auth,admin].some(x=>x.includes('google.script.run')));
+t('no direct google.script.run in public frontend',![login,erp,adapter,bridge,config,auth,admin].some(x=>x.includes('google.script.run')));
 t('admin UI has users/sessions/login/audit/issues',admin.includes('Users')&&admin.includes('Sessions')&&admin.includes('Login History')&&admin.includes('Audit Log')&&admin.includes('Issues'));
 t('admin requires server-validated ADMIN role',auth.includes('requireAdmin')&&admin.includes('Auth.requireAdmin'));
 t('desktop window controls hidden in web UI',erp.includes('.win-btn{display:none!important'));
-t('web Razorpay description no longer says Windows secure storage',!erp.includes('Windows secure storage'));
+t('no Windows secure storage wording',!erp.includes('Windows secure storage'));
 t('no Electron/npm runtime dependency',!fs.existsSync(path.join(root,'package.json'))&&!erp.includes('INCENTIFY Billing Desktop v4.0.0'));
-t('no obvious Razorpay production key literal committed',!/(rzp_(test|live)_[A-Za-z0-9]{8,})/.test([login,erp,adapter,config,auth,admin].join('\n')));
+t('no obvious Razorpay key literal',!/(rzp_(test|live)_[A-Za-z0-9]{8,})/.test([login,erp,adapter,config,auth,admin].join('\n')));
 t('GitHub Pages marker exists',fs.existsSync(path.join(root,'.nojekyll')));
-if(fail){console.error('\n'+fail+' verification(s) failed.');process.exit(1)}console.log('\nINCENTIFY GitHub frontend v5.1.1 verification passed.');
+t('SALES page allowlist exactly invoice/invoices/payments',erp.includes("const SALES_ALLOWED_PAGES = new Set(['invoice','invoices','payments'])"));
+t('SALES navigation role-filtered',erp.includes("if(m&&!SALES_ALLOWED_PAGES.has(m[1]))tab.style.display='none'"));
+t('SALES direct navigation guarded',erp.includes("if(isSalesUser()&&!SALES_ALLOWED_PAGES.has(id))"));
+t('SALES starts on Create Invoice',erp.includes("renderInvList();renderSalesPaymentTracking();showPage('invoice')"));
+t('SALES payment tracking uses invoice receivables',erp.includes('function renderSalesPaymentTracking()')&&erp.includes('DB.invoices||[]')&&erp.includes('Balance'));
+t('SALES invoice list hides pay-link and delete controls',erp.includes("sales?'':`<button class=\"action-btn\"")&&erp.includes("sales?'':`<button class=\"action-btn btn-delete\""));
+t('SALES Razorpay section hidden',erp.includes("section.textContent.includes('Online Payment — Razorpay')"));
+t('SALES finance auto-write disabled client-side',erp.includes("function upsertInvoiceEarning(inv){\n  if(isSalesUser())return false;"));
+const inlineScripts=[...erp.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).filter(x=>x.trim()); let inlineOk=true;
+for(const block of inlineScripts){try{new vm.Script(block)}catch(e){inlineOk=false;console.error('ERP inline script parse error:',e.message);break}} t('ERP inline JavaScript syntax parses',inlineOk);
+// Validate relative resources referenced in top-level HTML files.
+let refsOk=true; for(const htmlName of ['index.html','erp.html','admin.html']){const html=read(htmlName); const re=/(?:src|href)=["']([^"'#?]+)["']/g; let m; while((m=re.exec(html))){const ref=m[1]; if(/^(?:https?:|data:|mailto:|tel:|javascript:)/i.test(ref))continue; const target=path.resolve(root,ref); if(!fs.existsSync(target)){refsOk=false;console.error('Missing local resource:',htmlName,'->',ref);}}} t('all local HTML resources exist',refsOk);
+t('runtime does not depend on .git metadata',![login,erp,admin,adapter,bridge,config,auth].some(x=>x.includes('.git/')));
+if(fail){console.error('\n'+fail+' verification(s) failed.');process.exit(1)}
+console.log('\nINCENTIFY GitHub frontend v5.1.4 verification passed.');
