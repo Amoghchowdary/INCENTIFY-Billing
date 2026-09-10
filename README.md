@@ -1,31 +1,24 @@
-# INCENTIFY ERP Web — Frontend v5.1.4
+# INCENTIFY ERP Web — Frontend v6.0.0
 
 Production GitHub Pages frontend for **INCENTIFY Private Limited**.
 
-## Production backend
+## Backend
 
-`https://script.google.com/macros/s/AKfycbxJsQGoSpf3jVVSFZU0ta7Z46_82Fnj_cGHlgYs4YAPgW9pwD-cIWBJbz85T64P1WI/exec`
+Apps Script URL:
+`https://script.google.com/macros/s/AKfycbzaJhod-iShRt5UFT-Qn81rqsjOLtpH3vCUvXjKPIk-350ey72AkwC4q67DsKkDu0o-/exec`
 
-Backend expected: **Apps Script v5.1.2**, schema 5, status ONLINE.
+Required backend release: **6.0.0**, schema **5**, status **ONLINE**.
 
-## Access model
+V6 intentionally keeps the existing schema-5 backend storage so current Drive/Sheets production data is preserved.
 
-- `ADMIN`: full ERP and admin portal access.
-- `SALES`: exactly **Create Invoice**, **Manage Invoices**, and **Payment Tracking**.
-- SALES restrictions are enforced in both the frontend and the Apps Script backend.
+## Access
 
-## Deploy
+- ADMIN: full ERP + admin portal.
+- SALES: Create Invoice, Manage Invoices, Payment Tracking only.
 
-Copy the complete contents of this package to the root of the GitHub repository and push to `main`. GitHub Pages should publish from `main` / `(root)`.
+## Verify
 
-Before pushing, run:
+Run `node .\scripts\verify-frontend.js`.
+Expected final line: `INCENTIFY GitHub frontend v6.0.0 verification passed.`
 
-```powershell
-node .\scripts\verify-frontend.js
-```
-
-Expected final line:
-
-`INCENTIFY GitHub frontend v5.1.4 verification passed.`
-
-The public entry point remains the repository's GitHub Pages URL; `index.html` is the login-first page.
+The Git deployer also refuses to push until the live Apps Script backend reports v6.0.0 and the bridge handshake markers are present.

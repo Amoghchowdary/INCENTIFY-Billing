@@ -1,10 +1,10 @@
 window.INCENTIFY_CONFIG = Object.freeze({
-  VERSION: '5.1.4',
+  VERSION: '6.0.0',
   COMPANY: 'INCENTIFY Private Limited',
   TAGLINE: 'We Grow Together',
-  API_URL: 'https://script.google.com/macros/s/AKfycbxJsQGoSpf3jVVSFZU0ta7Z46_82Fnj_cGHlgYs4YAPgW9pwD-cIWBJbz85T64P1WI/exec',
-  BRIDGE_URL: 'https://script.google.com/macros/s/AKfycbxJsQGoSpf3jVVSFZU0ta7Z46_82Fnj_cGHlgYs4YAPgW9pwD-cIWBJbz85T64P1WI/exec?bridge=1&v=5.1.4',
-  SESSION_KEY: 'incentify_erp_session_v51',
-  USER_KEY: 'incentify_erp_user_v51',
+  API_URL: 'https://script.google.com/macros/s/AKfycbzaJhod-iShRt5UFT-Qn81rqsjOLtpH3vCUvXjKPIk-350ey72AkwC4q67DsKkDu0o-/exec',
+  BRIDGE_URL: 'https://script.google.com/macros/s/AKfycbzaJhod-iShRt5UFT-Qn81rqsjOLtpH3vCUvXjKPIk-350ey72AkwC4q67DsKkDu0o-/exec?bridge=1&v=6.0.0',
+  SESSION_KEY: 'incentify_erp_session_v6',
+  USER_KEY: 'incentify_erp_user_v6',
   POLL_MS: 5000
 });
