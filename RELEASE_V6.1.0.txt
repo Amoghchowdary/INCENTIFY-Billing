@@ -1,0 +1,8 @@
+INCENTIFY ERP FRONTEND V6.1.0
+
+Performance and role-gating release.
+- Fast role validation via sessionInfo.
+- SALES is fail-closed until role is known and sees only Create Invoice, Manage Invoices, Payment Tracking.
+- Startup no longer persists the DB immediately after loading.
+- Poll interval: 15 seconds.
+- Requires Apps Script backend 6.1.0 / schema 5.

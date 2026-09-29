@@ -1,7 +1,7 @@
-INCENTIFY ERP FRONTEND V6.0.0
+INCENTIFY ERP FRONTEND V6.1.0
 
 Static verification is performed by scripts/verify-frontend.js.
 Live backend verification is performed by scripts/verify-live-backend-v6.ps1.
 The Git deployer requires both verifiers to pass before commit/push.
 
-Data compatibility: backend application version 6.0.0, schemaVersion 5, existing V5_* storage keys retained.
+Data compatibility: backend application version 6.1.0, schemaVersion 5, existing V5_* storage keys retained.

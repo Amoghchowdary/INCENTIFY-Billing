@@ -1,4 +1,4 @@
-# INCENTIFY ERP Web — Frontend v6.0.0
+# INCENTIFY ERP Web — Frontend v6.1.0
 
 Production GitHub Pages frontend for **INCENTIFY Private Limited**.
 
@@ -7,7 +7,7 @@ Production GitHub Pages frontend for **INCENTIFY Private Limited**.
 Apps Script URL:
 `https://script.google.com/macros/s/AKfycbzaJhod-iShRt5UFT-Qn81rqsjOLtpH3vCUvXjKPIk-350ey72AkwC4q67DsKkDu0o-/exec`
 
-Required backend release: **6.0.0**, schema **5**, status **ONLINE**.
+Required backend release: **6.1.0**, schema **5**, status **ONLINE**.
 
 V6 intentionally keeps the existing schema-5 backend storage so current Drive/Sheets production data is preserved.
 
@@ -19,6 +19,6 @@ V6 intentionally keeps the existing schema-5 backend storage so current Drive/Sh
 ## Verify
 
 Run `node .\scripts\verify-frontend.js`.
-Expected final line: `INCENTIFY GitHub frontend v6.0.0 verification passed.`
+Expected final line: `INCENTIFY GitHub frontend v6.1.0 verification passed.`
 
-The Git deployer also refuses to push until the live Apps Script backend reports v6.0.0 and the bridge handshake markers are present.
+The Git deployer also refuses to push until the live Apps Script backend reports v6.1.0 and the bridge handshake markers are present.

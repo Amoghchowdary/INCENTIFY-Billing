@@ -1,4 +1,4 @@
-# Deployment — v6.0.0
+# Deployment — v6.1.0
 
 1. Update Apps Script first using the package folder 01_APPS_SCRIPT_UPDATE.
 2. Confirm VERIFY_LIVE_V6.ps1 passes.

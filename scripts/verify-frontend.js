@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const root=path.resolve(__dirname,'..');
-const FRONTEND_VERSION='6.0.0';
+const FRONTEND_VERSION='6.1.0';
 const BACKEND_URL='https://script.google.com/macros/s/AKfycbzaJhod-iShRt5UFT-Qn81rqsjOLtpH3vCUvXjKPIk-350ey72AkwC4q67DsKkDu0o-/exec';
 let fail=0; function t(name,cond){console.log((cond?'PASS ':'FAIL ')+name);if(!cond)fail++;}
 function read(rel){return fs.readFileSync(path.join(root,rel),'utf8');}
@@ -17,7 +17,7 @@ t('central invoice reservation retained',erp.includes('reserveInvoiceNumber')&&e
 t('invoice print copies original ERP CSS',adapter.includes("querySelectorAll('style,link[rel=\"stylesheet\"]')"));
 t('finance PDF workflow retained',adapter.includes('financeHtml')&&adapter.includes('INCENTIFY Finance Report'));
 t('frontend version is '+FRONTEND_VERSION,config.includes("VERSION: '"+FRONTEND_VERSION+"'"));
-t('ERP title is V6.0.0',erp.includes('Private ERP V6.0.0'));
+t('ERP title is V6.1.0',erp.includes('Private ERP V6.1.0'));
 t('production Apps Script API URL is exact',config.includes("API_URL: '"+BACKEND_URL+"'"));
 t('production bridge URL is exact',config.includes("BRIDGE_URL: '"+BACKEND_URL+'?bridge=1&v='+FRONTEND_VERSION+"'"));
 t('V6 localStorage keys configured',config.includes("SESSION_KEY: 'incentify_erp_session_v6'")&&config.includes("USER_KEY: 'incentify_erp_user_v6'"));
@@ -44,5 +44,10 @@ const inlineScripts=[...erp.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g
 for(const block of inlineScripts){try{new vm.Script(block)}catch(e){inlineOk=false;console.error('ERP inline script parse error:',e.message);break}} t('ERP inline JavaScript syntax parses',inlineOk);
 let refsOk=true; for(const htmlName of ['index.html','erp.html','admin.html']){const html=read(htmlName); const re=/(?:src|href)=["']([^"'#?]+)["']/g; let m; while((m=re.exec(html))){const ref=m[1]; if(/^(?:https?:|data:|mailto:|tel:|javascript:)/i.test(ref))continue; const target=path.resolve(root,ref); if(!fs.existsSync(target)){refsOk=false;console.error('Missing local resource:',htmlName,'->',ref);}}} t('all local HTML resources exist',refsOk);
 t('runtime does not depend on .git metadata',![login,erp,admin,adapter,bridge,config,auth].some(x=>x.includes('.git/')));
+t('fast sessionInfo role validation configured',auth.includes("A.call('sessionInfo'")&&adapter.includes("A.call('sessionInfo'"));
+t('ERP UI is fail-closed while role is pending',erp.includes('data-role-state="pending"')&&erp.includes('Loading secure workspace…'));
+t('early SALES gating exists before DB bootstrap',adapter.includes('applyEarlyRoleUi')&&adapter.includes("role==='SALES'"));
+t('startup load no longer auto-persists DB',erp.includes('Startup is read-only')&&!erp.includes("DB._ver='6.1.0';\n  persistDB();"));
+t('poll interval reduced backend pressure',config.includes('POLL_MS: 15000'));
 if(fail){console.error('\n'+fail+' verification(s) failed.');process.exit(1)}
-console.log('\nINCENTIFY GitHub frontend v6.0.0 verification passed.');
+console.log('\nINCENTIFY GitHub frontend v6.1.0 verification passed.');

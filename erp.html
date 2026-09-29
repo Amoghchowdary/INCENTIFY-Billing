@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>INCENTIFY — Private ERP V6.0.0</title>
+<title>INCENTIFY — Private ERP V6.1.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -15,6 +15,8 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+body[data-role-state="pending"] .tb-nav,body[data-role-state="pending"] .app-body{visibility:hidden!important;}
+body[data-role-state="pending"]::after{content:'Loading secure workspace…';position:fixed;inset:44px 0 0 0;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--green-dark);font-size:13px;font-weight:600;letter-spacing:.2px;z-index:9999;}
 
 /* TITLEBAR */
 .titlebar{height:var(--tbh);background:var(--green-dark);display:flex;align-items:center;padding:0 14px;-webkit-app-region:drag;user-select:none;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.07);}
@@ -325,7 +327,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .balance-toolbar{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:14px}.balance-note{font-size:10.5px;color:var(--text-muted);line-height:1.55;max-width:760px}.balance-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.balance-table{width:100%;border-collapse:collapse}.balance-table td{padding:8px 12px;border-bottom:1px solid #edf1ec;font-size:11.5px}.balance-table td:last-child{text-align:right;font-family:'JetBrains Mono',monospace}.balance-total td{font-weight:800;border-top:2px solid var(--border);border-bottom:0;padding-top:10px}.balance-status{padding:12px 14px;border-radius:9px;font-size:11px;font-weight:700;margin-bottom:16px}.balance-ok{background:#e8f5ee;color:#146431;border:1px solid #c5e2d0}.balance-warn{background:#fff4e8;color:#8a5200;border:1px solid #ead1ab}.report-export-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.report-export-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow)}.report-export-title{font:700 15px 'Playfair Display',serif;color:var(--green-dark);margin-bottom:5px}.report-export-sub{font-size:10.5px;color:var(--text-muted);line-height:1.55;margin-bottom:13px}.balance-derived{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--green);font-weight:700}.balance-manual{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:#6d7480;font-weight:700}@media(max-width:900px){.balance-grid,.report-export-grid{grid-template-columns:1fr}}
 </style>
 </head>
-<body>
+<body data-role-state="pending">
 
 <!-- TITLEBAR -->
 <div class="titlebar">
@@ -1160,8 +1162,8 @@ async function loadDB() {
   if(!DB.meta) DB.meta={lastInvoiceNum:0};
   if(!DB.settings) DB.settings={};
   migrateInvoicesToV28();
-  DB._ver='5.0.0';
-  persistDB();
+  DB._ver='6.1.0';
+  // Startup is read-only. Persist only after an actual user mutation; this avoids an unnecessary cloud commit on every login.
 }
 
 function migrateInvoicesToV28(){
@@ -1175,7 +1177,7 @@ function migrateInvoicesToV28(){
 
 function persistDB() {
   try {
-    DB._ver='5.0.0';
+    DB._ver='6.1.0';
     if(isElectron) eAPI.saveData(DB);
     else localStorage.setItem('sg_v4',JSON.stringify(DB));
   } catch(e) { toast('⚠️ Save failed',true); }
@@ -1190,7 +1192,7 @@ function bindCloudUpdates(){
       if(!incoming||typeof incoming!=='object')return;
       DB={...DB,...incoming,meta:{lastInvoiceNum:0,...(incoming.meta||{})}};
       ['bills','invoices','customers','activityLog','expenses','earnings','balanceSheetEntries','paymentRequests','paymentTransactions','paymentSyncLog'].forEach(k=>{if(!Array.isArray(DB[k]))DB[k]=[];});
-      DB._ver='5.0.0';
+      DB._ver='6.1.0';
       applyBusinessSettings();refreshCustSelect();renderDashboard();
       if(document.getElementById('page-invoices')?.classList.contains('active'))renderInvList();
       if(document.getElementById('page-payments')?.classList.contains('active'))renderPayments();
