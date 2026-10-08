@@ -11,13 +11,13 @@
         'bootstrapAdmin','bootstrapEmployee','dashboard','listEmployees',
         'listAttendance','getSettings','listAccessUsers','listHolidays',
         'listAttendanceExceptions','getMyAttendance','getMyCheckoutStatus',
-        'getAttendanceLinkContext'
+        'getAttendanceLinkContext','mailDiagnostics','listMailLog','listSystemRuns'
       ]);
     }
 
     isConfigured() {
       return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/i.test(this.baseUrl)
-        && !this.baseUrl.includes('PASTE_NEW_V17_APPS_SCRIPT');
+        && !this.baseUrl.includes('PASTE_NEW_V18_APPS_SCRIPT');
     }
 
     waitReady(timeout = 12000) {
@@ -61,24 +61,24 @@
       } else {
         for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
       }
-      return `ems17_${Date.now()}_${[...bytes].map(b => b.toString(16).padStart(2, '0')).join('')}`;
+      return `ems18_${Date.now()}_${[...bytes].map(b => b.toString(16).padStart(2, '0')).join('')}`;
     }
 
     _callbackName(attempt) {
       const suffix = `${Date.now()}_${++this.seq}_${attempt}_${Math.random().toString(36).slice(2)}`.replace(/[^A-Za-z0-9_]/g, '');
-      return `__incentify_ems_v17_cb_${suffix}`;
+      return `__incentify_ems_v18_cb_${suffix}`;
     }
 
     _jsonUrl(encoded, attempt) {
       const sep = this.baseUrl.includes('?') ? '&' : '?';
       const nonce = `${Date.now()}_${attempt}_${Math.random().toString(36).slice(2)}`;
-      return `${this.baseUrl}${sep}api=1&payload=${encodeURIComponent(encoded)}&v=${encodeURIComponent(window.INCENTIFY_EMS_CONFIG.BACKEND_VERSION || '17.0.0')}&transport=json&retry=${attempt}&_=${encodeURIComponent(nonce)}`;
+      return `${this.baseUrl}${sep}api=1&payload=${encodeURIComponent(encoded)}&v=${encodeURIComponent(window.INCENTIFY_EMS_CONFIG.BACKEND_VERSION || '18.0.0')}&transport=json&retry=${attempt}&_=${encodeURIComponent(nonce)}`;
     }
 
     _jsonpUrl(callback, encoded, attempt) {
       const sep = this.baseUrl.includes('?') ? '&' : '?';
       const nonce = `${Date.now()}_${attempt}_${Math.random().toString(36).slice(2)}`;
-      return `${this.baseUrl}${sep}api=1&callback=${encodeURIComponent(callback)}&payload=${encodeURIComponent(encoded)}&v=${encodeURIComponent(window.INCENTIFY_EMS_CONFIG.BACKEND_VERSION || '17.0.0')}&transport=jsonp&retry=${attempt}&_=${encodeURIComponent(nonce)}`;
+      return `${this.baseUrl}${sep}api=1&callback=${encodeURIComponent(callback)}&payload=${encodeURIComponent(encoded)}&v=${encodeURIComponent(window.INCENTIFY_EMS_CONFIG.BACKEND_VERSION || '18.0.0')}&transport=jsonp&retry=${attempt}&_=${encodeURIComponent(nonce)}`;
     }
 
     async _fetchOnce(encoded, timeout, attempt) {
@@ -145,7 +145,7 @@
         if (remaining <= 0) break;
         const perTransportTimeout = Math.max(3500, Math.min(8000, Math.floor(remaining / 2) || remaining));
 
-        // JSONP is the primary browser transport in V17 because it avoids the
+        // JSONP is the primary browser transport in V18 because it avoids the
         // Apps Script CORS/redirect instability observed in V14/V15.
         try { return await this._jsonpOnce(encoded, perTransportTimeout, attempt); }
         catch (error) {
@@ -163,7 +163,7 @@
 
         if (attempt < this.maxSafeAttempts) await this._sleep(150 * attempt);
       }
-      const finalError = this._networkError('Could not reach the INCENTIFY EMS V17 API. Please retry once.');
+      const finalError = this._networkError('Could not reach the INCENTIFY EMS V18 API. Please retry once.');
       finalError.cause = lastError || undefined;
       throw finalError;
     }
@@ -175,11 +175,11 @@
     }
 
     async call(action, payload = {}, timeout = 30000) {
-      if (!this.isConfigured()) throw new Error('V17 backend URL is not configured. Set the Apps Script /exec URL in js/config.js.');
+      if (!this.isConfigured()) throw new Error('V18 backend URL is not configured. Set the Apps Script /exec URL in js/config.js.');
       const requestId = this._requestId();
       const request = { action: String(action || ''), requestId, ...(payload || {}) };
       const encoded = this._encode(request);
-      if (encoded.length > 11000) throw new Error('Request payload is too large for the V17 browser API transport.');
+      if (encoded.length > 11000) throw new Error('Request payload is too large for the V18 browser API transport.');
       return this.safeRetryActions.has(String(action || ''))
         ? this._safeTransport(encoded, timeout)
         : this._singleDeliveryTransport(encoded, timeout);

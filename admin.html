@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b477a">
-  <meta name="description" content="INCENTIFY EMS V17 Admin Portal — attendance links, holidays, concessions and workforce control.">
+  <meta name="description" content="INCENTIFY EMS V18 Admin Portal — attendance links, holidays, concessions and workforce control.">
   <meta name="robots" content="noindex,nofollow">
   <title>INCENTIFY EMS — Admin Portal</title>
   <link rel="icon" href="./assets/icon-192.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./css/app.css?v=17.0.0">
+  <link rel="stylesheet" href="./css/app.css?v=18.0.0">
 </head>
 <body data-portal="admin">
 <div id="toastStack" class="toast-stack" aria-live="polite"></div>
@@ -145,21 +145,36 @@
     </section>
 
     <section id="page-access" class="page">
-      <article class="panel">
-        <div class="panel-head"><div><p class="eyebrow">ADMINISTRATOR ACCESS</p><h3>Add Admin / Staff Account</h3><p class="muted">Only an ADMIN can create another ADMIN, HR, or MANAGER account. The new user signs in with an email OTP.</p></div></div>
-        <div class="form-grid two-col">
-          <label class="field"><span>Name</span><input id="accessNewName" autocomplete="name" placeholder="Full name"></label>
-          <label class="field"><span>Email</span><input id="accessNewEmail" type="email" autocomplete="email" placeholder="name@company.com"></label>
-          <label class="field"><span>Role</span><select id="accessNewRole"><option value="ADMIN">ADMIN</option><option value="HR">HR</option><option value="MANAGER">MANAGER</option></select></label>
-          <div class="field action-field"><span>&nbsp;</span><button id="createAccessUserBtn" class="btn btn-primary">Add authorized account</button></div>
-        </div>
-        <small class="muted">Employee accounts are created from Employee Management and cannot be promoted here.</small>
-      </article>
-      <article class="panel">
-        <div class="panel-head"><div><p class="eyebrow">PORTAL ACCESS</p><h3>Authorized Accounts</h3></div><button id="toggleAccessBtn" class="btn btn-danger" disabled>Disable selected access</button></div>
-        <div id="selectedAccessBar" class="selection-bar"><b>No account selected</b><span>Select an account.</span></div>
-        <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Employee</th><th>Status</th><th>Last login</th></tr></thead><tbody id="accessTableBody"></tbody></table></div>
-      </article>
+      <div class="access-grid">
+        <article class="panel">
+          <div class="panel-head access-head">
+            <div><p class="eyebrow">ADMINISTRATOR ACCESS</p><h3>Authorized Admin & Staff Accounts</h3><p class="muted">Employee portal access is managed from Employee Management. This section is only for ADMIN, HR and MANAGER accounts.</p></div>
+            <button id="addAccessBtn" class="btn btn-primary" type="button">+ Add account</button>
+          </div>
+          <div id="selectedAccessBar" class="selection-bar"><b>No account selected</b><span>Select an account to enable, disable or delete it.</span></div>
+          <div class="access-actions">
+            <button id="toggleAccessBtn" class="btn btn-secondary" type="button" disabled>Disable selected</button>
+            <button id="deleteAccessBtn" class="btn btn-danger" type="button" disabled>Delete selected</button>
+          </div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Status</th><th>Last login</th></tr></thead><tbody id="accessTableBody"></tbody></table></div>
+        </article>
+        <article class="panel mail-health-panel">
+          <div class="panel-head"><div><p class="eyebrow">EMAIL DELIVERY</p><h3>Mail Health</h3><p class="muted">Checks the Apps Script execution account and remaining MailApp quota. Use the test button before relying on attendance-link delivery.</p></div><button id="refreshMailHealthBtn" class="btn btn-ghost" type="button">Refresh</button></div>
+          <div class="ops-grid mail-metrics">
+            <div><small>Delivery status</small><b id="mailHealthStatus">Checking…</b></div>
+            <div><small>Effective sender</small><b id="mailEffectiveSender">—</b></div>
+            <div><small>Required sender</small><b id="mailRequiredSender">—</b></div>
+            <div><small>Remaining daily quota</small><b id="mailQuota">—</b></div>
+          </div>
+          <div id="mailHealthMessage" class="inline-message neutral">Mail diagnostics have not been loaded yet.</div>
+          <div class="inline-action-row">
+            <label class="field grow"><span>Test recipient</span><input id="mailTestEmail" type="email" placeholder="name@example.com"></label>
+            <button id="sendTestMailBtn" class="btn btn-primary" type="button">Send test email</button>
+          </div>
+          <div class="panel-head mini-head"><div><p class="eyebrow">RECENT DELIVERY LOG</p><h3>Email attempts</h3></div><button id="refreshMailLogBtn" class="btn btn-ghost" type="button">Refresh log</button></div>
+          <div class="table-wrap compact-table"><table class="data-table"><thead><tr><th>Time</th><th>Type</th><th>Recipient</th><th>Status</th><th>Error</th></tr></thead><tbody id="mailLogBody"></tbody></table></div>
+        </article>
+      </div>
     </section>
 
     <section id="page-settings" class="page">
@@ -191,34 +206,72 @@
           <ul><li>Sunday: automatically closed.</li><li>Custom public/company holidays: closed.</li><li>Standard attendance link: 10:00–10:30.</li><li>Late arrivals require an Admin concession link.</li><li>OUT unlocks only after the full shift duration from actual IN time.</li></ul>
         </article>
       </div>
+      <article class="panel system-runs-panel">
+        <div class="panel-head"><div><p class="eyebrow">BACKEND EXECUTION HISTORY</p><h3>Application Run Descriptions</h3><p class="muted">Apps Script's execution list does not provide a custom description column. INCENTIFY records meaningful run status and descriptions here.</p></div><button id="refreshSystemRunsBtn" class="btn btn-ghost" type="button">Refresh runs</button></div>
+        <div class="table-wrap compact-table"><table class="data-table"><thead><tr><th>Started</th><th>Function</th><th>Status</th><th>Description</th></tr></thead><tbody id="systemRunsBody"></tbody></table></div>
+      </article>
     </section>
   </main>
 </div>
 
-<dialog id="employeeDialog" class="modal-dialog">
-  <form method="dialog" class="modal-card" onsubmit="return false">
-    <div class="modal-head"><div><p class="eyebrow">EMPLOYEE</p><h3 id="employeeDialogTitle">Add employee</h3></div><button class="icon-btn" value="cancel">×</button></div>
-    <input id="employeeCode" type="hidden">
-    <div class="form-grid two-col">
-      <label class="field"><span>Full name</span><input id="employeeFullName" required></label>
-      <label class="field"><span>Email</span><input id="employeeEmail" type="email"></label>
-      <label class="field"><span>Mobile</span><input id="employeeMobile"></label>
-      <label class="field"><span>Department</span><input id="employeeDepartment"></label>
-      <label class="field"><span>Designation</span><input id="employeeDesignation"></label>
-      <label class="field"><span>Branch</span><input id="employeeBranch"></label>
-      <label class="field"><span>Joining date</span><input id="employeeJoiningDate" type="date"></label>
-      <label class="field"><span>Shift</span><input id="employeeShift" value="General"></label>
-      <label class="field"><span>Status</span><select id="employeeStatus"><option>Active</option><option>Inactive</option></select></label>
-      <label class="field"><span>Emergency contact</span><input id="employeeEmergency"></label>
-      <label class="field"><span>Address</span><input id="employeeAddress"></label>
-      <label class="field"><span>Notes</span><input id="employeeNotes"></label>
-    </div>
-    <div class="modal-actions"><button class="btn btn-ghost" value="cancel">Cancel</button><button id="saveEmployeeBtn" class="btn btn-primary" type="button">Save employee</button></div>
-  </form>
-</dialog>
+<div id="employeeDialog" class="app-modal" hidden role="dialog" aria-modal="true" aria-labelledby="employeeDialogTitle">
+  <div class="app-modal-backdrop" data-close-modal="employeeDialog"></div>
+  <section class="app-modal-card employee-modal-card" tabindex="-1">
+    <div class="modal-head"><div><p class="eyebrow">EMPLOYEE MANAGEMENT</p><h3 id="employeeDialogTitle">Add employee</h3><p class="muted">Create or update the employee profile and portal identity.</p></div><button id="employeeDialogClose" class="icon-btn" type="button" aria-label="Close employee form">×</button></div>
+    <form id="employeeForm" novalidate>
+      <input id="employeeCode" type="hidden">
+      <div class="form-section"><div class="form-section-title"><b>Identity</b><small>Required employee details</small></div><div class="form-grid two-col">
+        <label class="field"><span>Full name *</span><input id="employeeFullName" required autocomplete="name"></label>
+        <label class="field"><span>Email</span><input id="employeeEmail" type="email" autocomplete="email"></label>
+        <label class="field"><span>Mobile</span><input id="employeeMobile" inputmode="tel" autocomplete="tel"></label>
+        <label class="field"><span>Joining date</span><input id="employeeJoiningDate" type="date"></label>
+      </div></div>
+      <div class="form-section"><div class="form-section-title"><b>Work</b><small>Role and location inside the company</small></div><div class="form-grid two-col">
+        <label class="field"><span>Department</span><input id="employeeDepartment"></label>
+        <label class="field"><span>Designation</span><input id="employeeDesignation"></label>
+        <label class="field"><span>Branch</span><input id="employeeBranch"></label>
+        <label class="field"><span>Shift</span><input id="employeeShift" value="General"></label>
+        <label class="field"><span>Status</span><select id="employeeStatus"><option>Active</option><option>Inactive</option></select></label>
+      </div></div>
+      <div class="form-section"><div class="form-section-title"><b>Contact & notes</b><small>Operational information</small></div><div class="form-grid two-col">
+        <label class="field"><span>Emergency contact</span><input id="employeeEmergency" inputmode="tel"></label>
+        <label class="field"><span>Address</span><input id="employeeAddress"></label>
+        <label class="field field-span-2"><span>Notes</span><textarea id="employeeNotes" rows="3"></textarea></label>
+      </div></div>
+      <div id="employeeFormMessage" class="inline-message" hidden></div>
+      <div class="modal-actions sticky-actions"><button id="cancelEmployeeBtn" class="btn btn-ghost" type="button">Cancel</button><button id="saveEmployeeBtn" class="btn btn-primary" type="submit">Save employee</button></div>
+    </form>
+  </section>
+</div>
 
-<script src="./js/config.js?v=17.0.0"></script>
-<script src="./js/api-client.js?v=17.0.0"></script>
-<script type="module" src="./js/admin.js?v=17.0.0"></script>
+<div id="accessDialog" class="app-modal" hidden role="dialog" aria-modal="true" aria-labelledby="accessDialogTitle">
+  <div class="app-modal-backdrop" data-close-modal="accessDialog"></div>
+  <section class="app-modal-card access-modal-card" tabindex="-1">
+    <div class="modal-head"><div><p class="eyebrow">ACCESS CONTROL</p><h3 id="accessDialogTitle">Add authorized account</h3><p class="muted">Create an ADMIN, HR or MANAGER login. Employees are managed separately.</p></div><button id="accessDialogClose" class="icon-btn" type="button" aria-label="Close access form">×</button></div>
+    <form id="accessForm" novalidate>
+      <div class="form-grid">
+        <label class="field"><span>Name *</span><input id="accessNewName" required autocomplete="name"></label>
+        <label class="field"><span>Email *</span><input id="accessNewEmail" type="email" required autocomplete="email"></label>
+        <label class="field"><span>Role</span><select id="accessNewRole"><option value="ADMIN">ADMIN</option><option value="HR">HR</option><option value="MANAGER">MANAGER</option></select></label>
+      </div>
+      <div id="accessFormMessage" class="inline-message" hidden></div>
+      <div class="modal-actions sticky-actions"><button id="cancelAccessBtn" class="btn btn-ghost" type="button">Cancel</button><button id="createAccessUserBtn" class="btn btn-primary" type="submit">Add authorized account</button></div>
+    </form>
+  </section>
+</div>
+
+
+<div id="confirmDialog" class="app-modal" hidden role="dialog" aria-modal="true" aria-labelledby="confirmDialogTitle">
+  <div class="app-modal-backdrop" data-close-modal="confirmDialog"></div>
+  <section class="app-modal-card confirm-modal-card" tabindex="-1">
+    <div class="modal-head"><div><p class="eyebrow">CONFIRM ACTION</p><h3 id="confirmDialogTitle">Please confirm</h3></div><button id="confirmDialogClose" class="icon-btn" type="button" aria-label="Close confirmation">×</button></div>
+    <p id="confirmDialogMessage" class="confirm-message"></p>
+    <div class="modal-actions"><button id="confirmDialogCancel" class="btn btn-ghost" type="button">Cancel</button><button id="confirmDialogAccept" class="btn btn-danger" type="button">Confirm</button></div>
+  </section>
+</div>
+
+<script src="./js/config.js?v=18.0.0"></script>
+<script src="./js/api-client.js?v=18.0.0"></script>
+<script type="module" src="./js/admin.js?v=18.0.0"></script>
 </body>
 </html>

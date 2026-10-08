@@ -3,7 +3,7 @@ param(
 )
 $ErrorActionPreference='Stop'
 $url=$Url.Trim()
-if(-not($url -match '^https://script\.google\.com/macros/s/.+/exec$')){throw 'Use the V17 Apps Script /exec URL.'}
+if(-not($url -match '^https://script\.google\.com/macros/s/.+/exec$')){throw 'Use the V18 Apps Script /exec URL.'}
 
 $pass=0
 $fail=0
@@ -14,7 +14,7 @@ for($test=1;$test -le 10;$test++){
   for($attempt=1;$attempt -le 3;$attempt++){
     try{
       $r=Invoke-RestMethod -Uri $url -Method Get -ErrorAction Stop
-      if($r.success -eq $true -and $r.version -eq '17.0.0' -and $r.status -eq 'ONLINE'){
+      if($r.success -eq $true -and $r.version -eq '18.0.0' -and $r.status -eq 'ONLINE'){
         if($attempt -gt 1){$recovered++}
         $ok=$true
         break
@@ -35,5 +35,5 @@ for($test=1;$test -le 10;$test++){
 }
 
 Write-Host "PASS=$pass FAIL=$fail RECOVERED_TRANSIENTS=$recovered"
-if($fail -ne 0){throw 'V17 deployment reliability test failed after retry recovery.'}
-Write-Host 'V17 DEPLOYMENT RELIABILITY: 10/10 LOGICAL REQUESTS PASS' -ForegroundColor Green
+if($fail -ne 0){throw 'V18 deployment reliability test failed after retry recovery.'}
+Write-Host 'V18 DEPLOYMENT RELIABILITY: 10/10 LOGICAL REQUESTS PASS' -ForegroundColor Green
