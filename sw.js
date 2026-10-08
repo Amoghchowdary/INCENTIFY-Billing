@@ -1,4 +1,4 @@
-const CACHE='incentify-ems-v14-shell-1';
+const CACHE='incentify-ems-v14-shell-2';
 const SHELL=['./','./index.html','./admin.html','./employee.html','./attendance.html','./css/app.css','./js/config.js','./js/api-client.js','./js/auth.js','./js/admin.js','./js/employee.js','./js/attendance.js','./assets/incentify-mark.png','./assets/icon-192.png','./assets/icon-512.png','./manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

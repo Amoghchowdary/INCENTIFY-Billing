@@ -5,6 +5,7 @@
     constructor(url) {
       this.baseUrl = String(url || '').trim();
       this.seq = 0;
+      this.maxNetworkAttempts = 4;
     }
 
     isConfigured() {
@@ -30,36 +31,47 @@
         .replace(/=+$/g, '');
     }
 
-    call(action, payload = {}, timeout = 45000) {
-      if (!this.isConfigured()) {
-        return Promise.reject(new Error('V14 backend URL is not configured. Paste the new Apps Script /exec URL into js/config.js.'));
-      }
+    _sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
-      const suffix = `${Date.now()}_${++this.seq}_${Math.random().toString(36).slice(2)}`
+    _networkError(message, code = 'NETWORK_ERROR') {
+      const error = new Error(message);
+      error.code = code;
+      return error;
+    }
+
+    _callbackName(attempt) {
+      const suffix = `${Date.now()}_${++this.seq}_${attempt}_${Math.random().toString(36).slice(2)}`
         .replace(/[^A-Za-z0-9_]/g, '');
-      const callback = `__incentify_ems_v14_cb_${suffix}`;
-      const request = { action: String(action || ''), ...(payload || {}) };
-      const encoded = this._encode(request);
+      return `__incentify_ems_v14_cb_${suffix}`;
+    }
 
-      if (encoded.length > 11000) {
-        return Promise.reject(new Error('Request payload is too large for the V14 browser API transport.'));
-      }
+    _requestUrl(callback, encoded, attempt) {
+      const sep = this.baseUrl.includes('?') ? '&' : '?';
+      const nonce = `${Date.now()}_${attempt}_${Math.random().toString(36).slice(2)}`;
+      return `${this.baseUrl}${sep}api=1&callback=${encodeURIComponent(callback)}&payload=${encodeURIComponent(encoded)}&v=14.0.0&retry=${attempt}&_=${encodeURIComponent(nonce)}`;
+    }
 
+    _jsonpOnce(encoded, timeout, attempt) {
       return new Promise((resolve, reject) => {
         let done = false;
+        const callback = this._callbackName(attempt);
         const script = document.createElement('script');
+        let timer = null;
 
         const clear = () => {
-          if (done) return;
+          if (done) return false;
           done = true;
-          clearTimeout(timer);
-          script.remove();
+          if (timer) clearTimeout(timer);
+          if (script.parentNode) script.parentNode.removeChild(script);
           try { delete window[callback]; } catch (_) { window[callback] = undefined; }
+          return true;
         };
 
         window[callback] = result => {
+          if (!clear()) return;
           const response = result || {};
-          clear();
           if (response.success === false) {
             const error = new Error(response.message || response.error || 'Server request failed.');
             error.code = response.error || 'SERVER_ERROR';
@@ -72,20 +84,64 @@
 
         script.async = true;
         script.referrerPolicy = 'no-referrer';
-        const sep = this.baseUrl.includes('?') ? '&' : '?';
-        script.src = `${this.baseUrl}${sep}api=1&callback=${encodeURIComponent(callback)}&payload=${encodeURIComponent(encoded)}&v=14.0.0&_=${Date.now()}`;
+        script.src = this._requestUrl(callback, encoded, attempt);
         script.onerror = () => {
-          clear();
-          reject(new Error('Could not reach the INCENTIFY EMS V14 Apps Script API. Verify the new deployment URL and web-app access.'));
+          if (!clear()) return;
+          reject(this._networkError(`Temporary Apps Script network error (attempt ${attempt}).`));
         };
 
-        const timer = setTimeout(() => {
-          clear();
-          reject(new Error(`Backend request timed out: ${action}`));
+        timer = setTimeout(() => {
+          if (!clear()) return;
+          reject(this._networkError(`Apps Script request timed out (attempt ${attempt}).`, 'TIMEOUT'));
         }, timeout);
 
         document.head.appendChild(script);
       });
+    }
+
+    async call(action, payload = {}, timeout = 45000) {
+      if (!this.isConfigured()) {
+        throw new Error('V14 backend URL is not configured. Paste the Apps Script /exec URL into js/config.js.');
+      }
+
+      const request = { action: String(action || ''), ...(payload || {}) };
+      const encoded = this._encode(request);
+
+      if (encoded.length > 11000) {
+        throw new Error('Request payload is too large for the V14 browser API transport.');
+      }
+
+      const startedAt = Date.now();
+      let lastError = null;
+
+      for (let attempt = 1; attempt <= this.maxNetworkAttempts; attempt++) {
+        const elapsed = Date.now() - startedAt;
+        const remaining = timeout - elapsed;
+        if (remaining <= 0) break;
+
+        const perAttemptTimeout = Math.max(5000, Math.min(15000, remaining));
+
+        try {
+          return await this._jsonpOnce(encoded, perAttemptTimeout, attempt);
+        } catch (error) {
+          const code = String(error && error.code || '');
+
+          // Server-side validation/authentication errors are authoritative and
+          // must be shown immediately. Only transport failures are retried.
+          if (code !== 'NETWORK_ERROR' && code !== 'TIMEOUT') throw error;
+
+          lastError = error;
+          if (attempt < this.maxNetworkAttempts) {
+            await this._sleep(250 * attempt);
+          }
+        }
+      }
+
+      const finalError = this._networkError(
+        'Could not reach the INCENTIFY EMS V14 Apps Script API after automatic retries. Please check the network and try again.'
+      );
+      finalError.cause = lastError || undefined;
+      throw finalError;
     }
   }
 

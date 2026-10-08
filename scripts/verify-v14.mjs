@@ -15,6 +15,7 @@ add(attendanceJs.includes('navigator.geolocation'),'attendance link captures mob
 add(adminJs.includes('createLateConcession')&&adminJs.includes('saveHoliday'),'admin APIs cover concessions and holidays');
 add(config.includes("VERSION: '14.0.0'"),'frontend is V14');
 add(api.includes('__incentify_ems_v14_cb_'),'V14 JSONP transport configured');
+add(api.includes('maxNetworkAttempts = 4')&&api.includes('Temporary Apps Script network error'),'V14 browser transport retries transient network failures');
 add(sw.includes('./attendance.html')&&sw.includes('./js/attendance.js'),'PWA caches attendance capture page');
 add(!admin.includes('Start recognition')&&!employee.includes('Capture my face'),'legacy portal face controls removed');
 add(!api.includes('iframe')&&!api.includes('Bridge.html'),'no iframe bridge is used');

@@ -13,3 +13,6 @@ Configure a fresh Apps Script `/exec` URL:
 powershell -ExecutionPolicy Bypass -File .\scripts\set-api-url.ps1 -Url "YOUR_V14_EXEC_URL"
 node .\scripts\verify-v14.mjs
 ```
+
+## Browser transport reliability revision
+This V14 build retries transient Apps Script JSONP network/404 failures automatically with a fresh callback and cache-busting nonce. Server-side errors such as wrong portal, invalid OTP, or access denial are never retried or hidden.
