@@ -1,0 +1,15 @@
+{
+  "name": "INCENTIFY Employee Management System",
+  "short_name": "INCENTIFY EMS",
+  "description": "Cloud employee management with secure attendance links, geofencing and shift controls.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f9",
+  "theme_color": "#0b477a",
+  "orientation": "any",
+  "icons": [
+    {"src":"./assets/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"./assets/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}

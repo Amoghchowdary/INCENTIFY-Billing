@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b477a">
+  <meta name="robots" content="noindex,nofollow">
+  <title>INCENTIFY — Secure Attendance Capture</title>
+  <link rel="icon" href="./assets/icon-192.png">
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body class="attendance-link-body">
+<div id="toastStack" class="toast-stack" aria-live="polite"></div>
+<main class="attendance-link-shell">
+  <section class="attendance-link-card">
+    <div class="attendance-link-brand"><img src="./assets/incentify-mark.png" alt="" class="brand-mark"><div><p class="eyebrow">SECURE ATTENDANCE LINK</p><h1>INCENTIFY Attendance</h1></div></div>
+    <div id="linkStatusBox" class="portal-notice"><b id="linkStatusTitle">Validating link…</b><p id="linkStatusText">Please wait.</p></div>
+
+    <div id="captureContent" class="hidden">
+      <div class="link-employee-grid">
+        <div><small>Employee</small><b id="linkEmployeeName">—</b></div>
+        <div><small>Employee ID</small><b id="linkEmployeeCode">—</b></div>
+        <div><small>Date</small><b id="linkDate">—</b></div>
+        <div><small>Expires</small><b id="linkExpiry">—</b></div>
+      </div>
+
+      <div class="location-check-card">
+        <div><small>Office validation</small><b id="linkLocationState">Not checked</b><p id="linkLocationDetail" class="muted">Precise mobile location is required.</p></div>
+        <button id="linkCheckLocationBtn" class="btn btn-secondary">Check location</button>
+      </div>
+
+      <div class="self-camera-wrap attendance-link-camera">
+        <video id="linkVideo" autoplay muted playsinline></video>
+        <canvas id="linkCanvas"></canvas>
+        <div id="linkCameraPlaceholder" class="camera-placeholder"><span>◎</span><b>Camera is off</b><small>Face verification happens only on this secure link.</small></div>
+        <div id="linkCaptureProgress" class="enroll-progress">Ready</div>
+      </div>
+
+      <button id="linkCaptureBtn" class="btn btn-primary btn-block">Verify location & face</button>
+      <p class="muted attendance-link-privacy">The link is employee-specific and expires automatically. Location must be inside the configured office geofence. The Admin and Employee portals do not run face recognition.</p>
+    </div>
+
+    <div id="linkSuccess" class="success-panel hidden">
+      <span>✓</span><h2 id="linkSuccessTitle">Attendance recorded</h2><p id="linkSuccessText"></p><a class="btn btn-secondary" href="./">Open INCENTIFY EMS</a>
+    </div>
+  </section>
+</main>
+<script src="./js/config.js"></script>
+<script src="./js/api-client.js"></script>
+<script type="module" src="./js/attendance.js"></script>
+</body>
+</html>

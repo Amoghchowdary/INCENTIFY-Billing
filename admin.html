@@ -1,3 +1,214 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>INCENTIFY ERP — Admin</title><style>:root{--n:#083866;--b:#0c4b7c;--bg:#f5f8fb;--line:#d4e0ea;--mut:#63778a}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,sans-serif;color:#132333}header{height:58px;background:#062a4b;color:white;display:flex;align-items:center;padding:0 22px;gap:12px}header img{width:38px;height:34px;object-fit:contain;background:#fff;border-radius:6px}header .grow{flex:1}button{border:0;border-radius:8px;padding:8px 11px;cursor:pointer}.ghost{background:rgba(255,255,255,.12);color:#fff}.wrap{max-width:1300px;margin:auto;padding:22px}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.card,.panel{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 20px rgba(8,56,102,.06)}.card{padding:16px}.k{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--mut)}.v{font-size:25px;font-weight:800;color:var(--n);margin-top:5px}.tabs{display:flex;gap:7px;margin:20px 0}.tabs button{background:#eaf2f8;color:var(--n);font-weight:700}.tabs button.active{background:var(--n);color:#fff}.panel{padding:16px}.view{display:none}.view.active{display:block}table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:9px;border-bottom:1px solid #e8eef3;vertical-align:top}th{font-size:10px;text-transform:uppercase;color:var(--mut)}input,select{padding:9px;border:1px solid var(--line);border-radius:7px}.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.primary{background:var(--n);color:#fff}.mini{background:#eaf2f8;color:var(--n)}.danger{background:#fdf0ee;color:#b42318}.status{padding:3px 7px;border-radius:12px;background:#eef4f8;font-size:10px}.online{background:#e7f7ee;color:#166534}@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.wrap{padding:12px}table{display:block;overflow:auto}}</style></head><body style="visibility:hidden"><header><img src="assets/INCENTIFY_app_mark.png"><div><strong>INCENTIFY ERP Admin</strong><div style="font-size:10px;color:#b8cde0">Users · Sessions · Login history · Audit · Issues</div></div><div class="grow"></div><button class="ghost" onclick="location.href='erp.html'">ERP</button><button class="ghost" id="logout">Logout</button></header><main class="wrap"><section class="cards"><div class="card"><div class="k">Version</div><div class="v" id="s-ver">—</div></div><div class="card"><div class="k">Active users</div><div class="v" id="s-users">—</div></div><div class="card"><div class="k">Active sessions</div><div class="v" id="s-sessions">—</div></div><div class="card"><div class="k">Open issues</div><div class="v" id="s-issues">—</div></div><div class="card"><div class="k">DB revision</div><div class="v" id="s-rev">—</div></div></section><nav class="tabs"><button data-tab="users" class="active">Users</button><button data-tab="sessions">Sessions</button><button data-tab="login">Login History</button><button data-tab="audit">Audit Log</button><button data-tab="issues">Issues</button></nav><section class="panel"><div id="users" class="view active"><div class="row"><input id="u-email" placeholder="email@company.com" style="min-width:240px"><input id="u-name" placeholder="Name"><select id="u-role"><option>VIEWER</option><option>SALES</option><option>ACCOUNTS</option><option>DIRECTOR</option><option>ADMIN</option></select><button class="primary" id="u-save">Add / Update</button></div><div id="users-table"></div></div><div id="sessions" class="view"><div id="sessions-table"></div></div><div id="login" class="view"><div id="login-table"></div></div><div id="audit" class="view"><div id="audit-table"></div></div><div id="issues" class="view"><div class="row"><button class="primary" id="backup">Create Cloud Backup</button><span id="backup-msg"></span></div><div id="issues-table"></div></div></section></main><script src="js/config.js"></script><script src="js/bridge-client.js"></script><script src="js/auth.js"></script><script>
-(async()=>{const A=incentifyApi,Auth=IncentifyAuth;let token=Auth.token();const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));await Auth.requireAdmin();document.body.style.visibility='visible';document.getElementById('logout').onclick=()=>Auth.logout();async function call(action,p={}){return A.call(action,{token,...p},60000)}async function status(){const s=await call('systemStatus');document.getElementById('s-ver').textContent=s.version;document.getElementById('s-users').textContent=s.users;document.getElementById('s-sessions').textContent=s.activeSessions;document.getElementById('s-issues').textContent=s.openIssues;document.getElementById('s-rev').textContent=s.revision}async function users(){const r=await call('adminListUsers');document.getElementById('users-table').innerHTML='<table><tr><th>Email</th><th>Name</th><th>Role</th><th>Status</th><th></th></tr>'+(r.users||[]).map(u=>`<tr><td>${esc(u.email)}</td><td>${esc(u.name)}</td><td>${esc(u.role)}</td><td>${esc(u.status)}</td><td><button class="mini toggle" data-email="${esc(u.email)}" data-status="${u.status==='ACTIVE'?'DISABLED':'ACTIVE'}">${u.status==='ACTIVE'?'Disable':'Enable'}</button></td></tr>`).join('')+'</table>';document.querySelectorAll('.toggle').forEach(b=>b.onclick=async()=>{await call('adminSetUserStatus',{email:b.dataset.email,status:b.dataset.status});await users();await status()})}async function sessions(){const r=await call('adminListSessions',{limit:200});document.getElementById('sessions-table').innerHTML='<table><tr><th>User</th><th>Role</th><th>Created</th><th>Last seen</th><th>Status</th><th></th></tr>'+(r.sessions||[]).map(s=>`<tr><td>${esc(s.email)}</td><td>${esc(s.role)}</td><td>${esc(s.createdAt)}</td><td>${esc(s.lastSeenAt)}</td><td><span class="status ${s.online?'online':''}">${s.online?'ONLINE':esc(s.status)}</span></td><td>${s.status==='ACTIVE'?`<button class="danger kick" data-hash="${esc(s.sessionHash)}">Force logout</button>`:''}</td></tr>`).join('')+'</table>';document.querySelectorAll('.kick').forEach(b=>b.onclick=async()=>{await call('adminForceLogout',{sessionHash:b.dataset.hash});await sessions();await status()})}async function login(){const r=await call('adminLoginHistory',{limit:300});document.getElementById('login-table').innerHTML='<table><tr><th>Time</th><th>Email</th><th>Event</th><th>Status</th><th>Message</th></tr>'+(r.events||[]).map(x=>`<tr><td>${esc(x.TIMESTAMP)}</td><td>${esc(x.EMAIL)}</td><td>${esc(x.EVENT)}</td><td>${esc(x.STATUS)}</td><td>${esc(x.MESSAGE)}</td></tr>`).join('')+'</table>'}async function audit(){const r=await call('adminAudit',{limit:300});document.getElementById('audit-table').innerHTML='<table><tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>Status</th><th>Message</th></tr>'+(r.events||[]).map(x=>`<tr><td>${esc(x.TIMESTAMP)}</td><td>${esc(x.EMAIL)}</td><td>${esc(x.ACTION)}</td><td>${esc(x.ENTITY)} ${esc(x.ENTITY_ID)}</td><td>${esc(x.STATUS)}</td><td>${esc(x.MESSAGE)}</td></tr>`).join('')+'</table>'}async function issues(){const r=await call('adminIssues',{limit:200});document.getElementById('issues-table').innerHTML='<table><tr><th>Time</th><th>Severity</th><th>Source</th><th>Message</th><th>Status</th><th></th></tr>'+(r.issues||[]).map(x=>`<tr><td>${esc(x.TIMESTAMP)}</td><td>${esc(x.SEVERITY)}</td><td>${esc(x.SOURCE)}</td><td>${esc(x.MESSAGE)}</td><td>${esc(x.STATUS)}</td><td>${x.STATUS==='OPEN'?`<button class="mini resolve" data-id="${esc(x.ISSUE_ID)}">Resolve</button>`:''}</td></tr>`).join('')+'</table>';document.querySelectorAll('.resolve').forEach(b=>b.onclick=async()=>{await call('adminResolveIssue',{issueId:b.dataset.id});await issues();await status()})}document.getElementById('u-save').onclick=async()=>{await call('adminUpsertUser',{user:{email:document.getElementById('u-email').value.trim(),name:document.getElementById('u-name').value.trim(),role:document.getElementById('u-role').value,status:'ACTIVE'}});document.getElementById('u-email').value='';document.getElementById('u-name').value='';await users();await status()};document.getElementById('backup').onclick=async()=>{const m=document.getElementById('backup-msg');m.textContent='Creating…';try{const r=await call('createBackup');m.textContent='Created '+(r.backup?.fileName||'backup')}catch(e){m.textContent=e.message}};const loaders={users,sessions,login,audit,issues};document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=async()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active');await loaders[b.dataset.tab]()});await status();await users()})().catch(e=>{console.error(e);alert(e.message)});
-</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b477a">
+  <meta name="description" content="INCENTIFY EMS V14 Admin Portal — attendance links, holidays, concessions and workforce control.">
+  <meta name="robots" content="noindex,nofollow">
+  <title>INCENTIFY EMS — Admin Portal</title>
+  <link rel="icon" href="./assets/icon-192.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body data-portal="admin">
+<div id="toastStack" class="toast-stack" aria-live="polite"></div>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand-block"><img src="./assets/incentify-mark.png" alt="" class="brand-mark"><div><strong>INCENTIFY EMS</strong><small>WE GROW TOGETHER</small></div></div>
+    <nav class="nav-list">
+      <button class="nav-item active" data-page="dashboard"><span>⌂</span><b>Dashboard</b></button>
+      <button class="nav-item" data-page="employees"><span>◎</span><b>Employees</b><em id="navEmployeeCount">0</em></button>
+      <button class="nav-item" data-page="attendance"><span>◷</span><b>Attendance</b><em id="navAttendanceCount">0</em></button>
+      <button class="nav-item" data-page="schedule"><span>▦</span><b>Schedule</b></button>
+      <button class="nav-item" data-page="reports"><span>⇩</span><b>Reports</b></button>
+      <button class="nav-item" data-page="access"><span>♙</span><b>Access</b></button>
+      <button class="nav-item" data-page="settings"><span>⚙</span><b>Settings</b></button>
+    </nav>
+    <div class="sidebar-foot"><span class="online-dot"></span><span>Cloud backend</span><b id="backendState">Checking…</b></div>
+  </aside>
+
+  <main class="main-area">
+    <header class="topbar">
+      <button id="menuBtn" class="icon-btn mobile-only" type="button">☰</button>
+      <div><p id="pageEyebrow" class="eyebrow">WORKFORCE OVERVIEW</p><h2 id="pageTitle">Dashboard</h2></div>
+      <div class="topbar-actions">
+        <span id="dataModeBadge" class="badge badge-success">PRODUCTION</span>
+        <div class="user-chip"><span id="userInitial">I</span><div><b id="userName">Admin</b><small id="userRole">—</small></div></div>
+        <button id="logoutBtn" class="btn btn-ghost" type="button">Logout</button>
+      </div>
+    </header>
+
+    <section id="page-dashboard" class="page active-page">
+      <div class="metric-grid">
+        <article class="metric"><span>Total Employees</span><strong id="metricTotal">0</strong><small>Active workforce</small></article>
+        <article class="metric"><span>Present Today</span><strong id="metricPresent">0</strong><small>Unique check-ins</small></article>
+        <article class="metric"><span>Absent Today</span><strong id="metricAbsent">0</strong><small>No IN record</small></article>
+        <article class="metric"><span>Currently In</span><strong id="metricIn">0</strong><small>Shift not checked out</small></article>
+        <article class="metric"><span>Today's Punches</span><strong id="metricPunches">0</strong><small>IN + OUT events</small></article>
+      </div>
+      <div class="dashboard-grid">
+        <article class="panel">
+          <div class="panel-head"><div><p class="eyebrow">TODAY'S ATTENDANCE CONTROL</p><h3>Attendance Window</h3></div><span id="todayWorkdayBadge" class="badge badge-neutral">Checking…</span></div>
+          <div class="ops-grid">
+            <div><small>Standard link</small><b id="dashLinkWindow">10:00–10:30</b></div>
+            <div><small>Shift requirement</small><b id="dashShiftHours">8 hours</b></div>
+            <div><small>Office geofence</small><b id="dashOfficeRadius">150 m</b></div>
+            <div><small>Next holiday</small><b id="dashNextHoliday">—</b></div>
+          </div>
+          <p id="todayWorkdayMessage" class="muted">Loading schedule…</p>
+        </article>
+        <article class="panel activity-panel">
+          <div class="panel-head"><div><p class="eyebrow">REAL TIME</p><h3>Recent Attendance</h3></div><button class="btn btn-ghost" data-page-jump="attendance">View ledger</button></div>
+          <div id="recentActivity" class="activity-list empty-state">No attendance records yet.</div>
+        </article>
+      </div>
+    </section>
+
+    <section id="page-employees" class="page">
+      <article class="panel">
+        <div class="panel-head employee-head">
+          <div><p class="eyebrow">EMPLOYEE MANAGEMENT</p><h3>Employee Directory</h3><p class="muted">Identity verification is handled only through secure attendance links. The Admin portal contains no camera or recognition controls.</p></div>
+          <div class="action-wrap">
+            <button id="addEmployeeBtn" class="btn btn-primary">+ Add employee</button>
+            <button id="editEmployeeBtn" class="btn btn-secondary" disabled>Edit selected</button>
+            <button id="sendEnrollmentBtn" class="btn btn-secondary" disabled>Send enrollment link</button>
+            <button id="resendAttendanceBtn" class="btn btn-accent" disabled>Resend today's link</button>
+            <button id="deleteEmployeeBtn" class="btn btn-danger" disabled>Delete selected</button>
+          </div>
+        </div>
+        <div id="selectedEmployeeBar" class="selection-bar"><b>No employee selected</b><span>Select an employee to manage access or attendance links.</span></div>
+        <div class="toolbar"><label class="search-box"><span>⌕</span><input id="employeeSearch" type="search" placeholder="Search employee, code, email, department…"></label></div>
+        <div class="table-wrap">
+          <table class="data-table"><thead><tr><th>Code</th><th>Employee</th><th>Email</th><th>Department</th><th>Designation</th><th>Status</th></tr></thead><tbody id="employeeTableBody"></tbody></table>
+        </div>
+      </article>
+    </section>
+
+    <section id="page-attendance" class="page">
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">ATTENDANCE MANAGEMENT</p><h3>Attendance Ledger</h3></div><span id="attendanceModeNote" class="badge badge-success">Production</span></div>
+        <div class="filter-grid">
+          <label class="field compact"><span>From</span><input id="attendanceStart" type="date"></label>
+          <label class="field compact"><span>To</span><input id="attendanceEnd" type="date"></label>
+          <label class="field compact"><span>Employee</span><select id="attendanceEmployee"><option value="">All employees</option></select></label>
+          <button id="applyAttendanceFilters" class="btn btn-primary">Apply filters</button>
+        </div>
+        <div class="attendance-actions"><button id="deleteSelectedAttendance" class="btn btn-danger" disabled>Delete selected test records</button><span id="attendanceSelectionCount" class="muted">0 selected</span></div>
+        <div class="table-wrap"><table class="data-table attendance-table"><thead><tr><th class="center"><input id="selectAllAttendance" type="checkbox"></th><th>Employee</th><th>Punch</th><th>Timestamp</th><th>Required OUT</th><th>Source</th><th>Distance</th></tr></thead><tbody id="attendanceTableBody"></tbody></table></div>
+      </article>
+    </section>
+
+    <section id="page-schedule" class="page">
+      <div class="schedule-grid">
+        <article class="panel">
+          <div class="panel-head"><div><p class="eyebrow">HOLIDAY CALENDAR</p><h3>Working Calendar</h3><p class="muted">Every Sunday is automatically closed. Add public/company holidays here; no 10 AM attendance email is sent on closed days.</p></div><div class="calendar-nav"><button id="calendarPrev" class="btn btn-ghost">‹</button><b id="calendarTitle">Month</b><button id="calendarNext" class="btn btn-ghost">›</button></div></div>
+          <div class="holiday-calendar" id="holidayCalendar"></div>
+        </article>
+        <article class="panel">
+          <p class="eyebrow">ADD HOLIDAY</p><h3>Plan a Holiday</h3>
+          <div class="form-grid">
+            <label class="field"><span>Date</span><input id="holidayDate" type="date"></label>
+            <label class="field"><span>Holiday name</span><input id="holidayName" placeholder="e.g. Diwali"></label>
+            <label class="field"><span>Type</span><select id="holidayType"><option>PUBLIC</option><option>COMPANY</option><option>OPTIONAL</option></select></label>
+            <label class="field"><span>Notes</span><input id="holidayNotes" placeholder="Optional"></label>
+          </div>
+          <button id="saveHolidayBtn" class="btn btn-primary">Add holiday</button>
+          <div class="table-wrap compact-table"><table class="data-table"><thead><tr><th>Date</th><th>Holiday</th><th>Type</th><th></th></tr></thead><tbody id="holidayTableBody"></tbody></table></div>
+        </article>
+      </div>
+
+      <div class="schedule-grid">
+        <article class="panel">
+          <p class="eyebrow">LATE ARRIVAL CONCESSION</p><h3>Issue an Exception Link</h3>
+          <p class="muted">Use this when the 10:30 standard link has expired because of traffic or another approved reason.</p>
+          <div class="form-grid two-col">
+            <label class="field"><span>Employee</span><select id="concessionEmployee"></select></label>
+            <label class="field"><span>Date</span><input id="concessionDate" type="date"></label>
+            <label class="field"><span>Link valid until</span><input id="concessionUntil" type="time" value="11:30"></label>
+            <label class="field"><span>Reason</span><input id="concessionReason" placeholder="Traffic delay, client visit…"></label>
+          </div>
+          <button id="issueConcessionBtn" class="btn btn-primary">Approve & email late link</button>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div><p class="eyebrow">EXCEPTION HISTORY</p><h3>Recent Concessions</h3></div></div>
+          <div class="table-wrap compact-table"><table class="data-table"><thead><tr><th>Employee</th><th>Date</th><th>Until</th><th>Reason</th><th>Status</th></tr></thead><tbody id="exceptionTableBody"></tbody></table></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="page-reports" class="page">
+      <div class="report-grid">
+        <article class="panel report-card"><span class="report-icon">▤</span><h3>Attendance Workbook</h3><p>Create an Excel attendance workbook in INCENTIFY Drive.</p><button id="exportXlsxBtn" class="btn btn-primary">Generate Excel workbook</button><small id="exportStatus" class="muted">Uses current attendance filters.</small></article>
+        <article class="panel report-card"><span class="report-icon">☁</span><h3>Cloud Backup</h3><p>Create a JSON backup of employees, attendance and settings.</p><button id="cloudBackupBtn" class="btn btn-secondary">Create cloud backup</button><small id="backupStatus" class="muted">Admin permission required.</small></article>
+      </div>
+    </section>
+
+    <section id="page-access" class="page">
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">PORTAL ACCESS</p><h3>Authorized Accounts</h3></div><button id="toggleAccessBtn" class="btn btn-danger" disabled>Disable selected access</button></div>
+        <div id="selectedAccessBar" class="selection-bar"><b>No account selected</b><span>Select an account.</span></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Employee</th><th>Status</th><th>Last login</th></tr></thead><tbody id="accessTableBody"></tbody></table></div>
+      </article>
+    </section>
+
+    <section id="page-settings" class="page">
+      <div class="settings-grid">
+        <article class="panel">
+          <p class="eyebrow">ATTENDANCE POLICY</p><h3>Schedule & Location</h3>
+          <div class="form-grid two-col">
+            <label class="field"><span>Company name</span><input id="settingCompany"></label>
+            <label class="field"><span>Data mode</span><select id="settingDataMode"><option value="production">Production</option><option value="testing">Testing</option></select></label>
+            <label class="field"><span>Daily link opens</span><input id="settingLinkOpen" type="time"></label>
+            <label class="field"><span>Daily link expires</span><input id="settingLinkClose" type="time"></label>
+            <label class="field"><span>Shift duration (minutes)</span><input id="settingShiftMinutes" type="number" min="60" max="960"></label>
+            <label class="field"><span>Office radius (metres)</span><input id="settingOfficeRadius" type="number" min="20" max="5000"></label>
+            <label class="field"><span>Office latitude</span><input id="settingOfficeLatitude"></label>
+            <label class="field"><span>Office longitude</span><input id="settingOfficeLongitude"></label>
+            <label class="field"><span>Maximum GPS accuracy (m)</span><input id="settingMaxLocationAccuracy" type="number"></label>
+            <label class="field"><span>Daily attendance email</span><select id="settingDailyAttendanceEmail"><option value="1">Enabled</option><option value="0">Disabled</option></select></label>
+            <label class="field"><span>Sender email</span><input id="settingAttendanceSender" readonly></label>
+            <label class="field"><span>Admin report copy</span><input id="settingAttendanceCopy"></label>
+            <label class="field"><span>Employee portal URL</span><input id="settingEmployeePortalUrl"></label>
+            <label class="field"><span>Attendance capture URL</span><input id="settingAttendanceCaptureUrl"></label>
+          </div>
+          <button id="saveSettingsBtn" class="btn btn-primary">Save settings</button>
+        </article>
+        <article class="panel security-panel">
+          <p class="eyebrow">CURRENT OFFICE</p><h3>Configured Geofence</h3>
+          <p><b>17°29'54.0"N 78°23'03.8"E</b></p>
+          <p class="muted">Decimal coordinates: 17.4983333, 78.3843889. Attendance IN and OUT require precise mobile location within the configured radius.</p>
+          <ul><li>Sunday: automatically closed.</li><li>Custom public/company holidays: closed.</li><li>Standard attendance link: 10:00–10:30.</li><li>Late arrivals require an Admin concession link.</li><li>OUT unlocks only after the full shift duration from actual IN time.</li></ul>
+        </article>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="employeeDialog" class="modal-dialog">
+  <form method="dialog" class="modal-card" onsubmit="return false">
+    <div class="modal-head"><div><p class="eyebrow">EMPLOYEE</p><h3 id="employeeDialogTitle">Add employee</h3></div><button class="icon-btn" value="cancel">×</button></div>
+    <input id="employeeCode" type="hidden">
+    <div class="form-grid two-col">
+      <label class="field"><span>Full name</span><input id="employeeFullName" required></label>
+      <label class="field"><span>Email</span><input id="employeeEmail" type="email"></label>
+      <label class="field"><span>Mobile</span><input id="employeeMobile"></label>
+      <label class="field"><span>Department</span><input id="employeeDepartment"></label>
+      <label class="field"><span>Designation</span><input id="employeeDesignation"></label>
+      <label class="field"><span>Branch</span><input id="employeeBranch"></label>
+      <label class="field"><span>Joining date</span><input id="employeeJoiningDate" type="date"></label>
+      <label class="field"><span>Shift</span><input id="employeeShift" value="General"></label>
+      <label class="field"><span>Status</span><select id="employeeStatus"><option>Active</option><option>Inactive</option></select></label>
+      <label class="field"><span>Emergency contact</span><input id="employeeEmergency"></label>
+      <label class="field"><span>Address</span><input id="employeeAddress"></label>
+      <label class="field"><span>Notes</span><input id="employeeNotes"></label>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" value="cancel">Cancel</button><button id="saveEmployeeBtn" class="btn btn-primary" type="button">Save employee</button></div>
+  </form>
+</dialog>
+
+<script src="./js/config.js"></script>
+<script src="./js/api-client.js"></script>
+<script type="module" src="./js/admin.js"></script>
+</body>
+</html>

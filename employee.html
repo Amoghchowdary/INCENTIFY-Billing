@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b477a">
+  <meta name="description" content="INCENTIFY EMS V14 Employee Portal — read-only attendance and shift checkout.">
+  <meta name="robots" content="noindex,nofollow">
+  <title>INCENTIFY EMS — Employee Portal</title>
+  <link rel="icon" href="./assets/icon-192.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body data-portal="employee">
+<div id="toastStack" class="toast-stack" aria-live="polite"></div>
+<div class="employee-portal-shell">
+  <header class="employee-portal-header">
+    <div class="brand-block employee-brand"><img src="./assets/incentify-mark.png" alt="" class="brand-mark"><div><strong>INCENTIFY EMS</strong><small>EMPLOYEE PORTAL</small></div></div>
+    <div class="employee-header-actions"><span id="employeeBackendState" class="badge badge-neutral">Checking…</span><div class="user-chip"><span id="employeeUserInitial">E</span><div><b id="employeeUserName">Employee</b><small>EMPLOYEE</small></div></div><button id="employeeLogoutBtn" class="btn btn-ghost">Logout</button></div>
+  </header>
+
+  <main class="employee-portal-main">
+    <section class="employee-welcome">
+      <div><p class="eyebrow">EMPLOYEE SELF SERVICE</p><h1 id="employeeWelcomeName">Welcome</h1><p class="muted">Check-in is completed only from the secure email attendance link. This portal is for your attendance history and shift checkout.</p></div>
+      <div class="employee-code-badge"><small>EMPLOYEE CODE</small><b id="selfEmployeeCode">—</b></div>
+    </section>
+
+    <section class="employee-metric-grid">
+      <article class="metric"><span>Employment</span><strong id="selfStatus">—</strong><small>Profile status</small></article>
+      <article class="metric"><span>Today's status</span><strong id="selfTodayStatus">—</strong><small id="selfTodayDetail">No attendance yet</small></article>
+      <article class="metric"><span>Required shift</span><strong id="selfShiftDuration">8h</strong><small>Counted from actual IN time</small></article>
+      <article class="metric"><span>Checkout</span><strong id="selfCheckoutState">—</strong><small id="selfCheckoutTime">Waiting for IN</small></article>
+    </section>
+
+    <section class="employee-portal-grid">
+      <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">MY PROFILE</p><h3>Employee Details</h3></div><span class="badge badge-success">Read only</span></div>
+        <div class="self-profile-grid">
+          <div><small>Name</small><b id="selfName">—</b></div><div><small>Email</small><b id="selfEmail">—</b></div>
+          <div><small>Department</small><b id="selfDepartment">—</b></div><div><small>Designation</small><b id="selfDesignation">—</b></div>
+          <div><small>Branch</small><b id="selfBranch">—</b></div><div><small>Shift</small><b id="selfShift">—</b></div>
+          <div><small>Joining Date</small><b id="selfJoining">—</b></div><div><small>Portal Access</small><b class="face-state">ACTIVE</b></div>
+        </div>
+      </article>
+
+      <article class="panel checkout-panel">
+        <div class="panel-head"><div><p class="eyebrow">SHIFT CHECKOUT</p><h3>Complete My Shift</h3></div><span id="checkoutBadge" class="badge badge-neutral">WAITING</span></div>
+        <div class="shift-timeline">
+          <div><small>Checked IN</small><b id="checkoutInTime">—</b></div>
+          <div><small>Earliest OUT</small><b id="checkoutEligibleTime">—</b></div>
+          <div><small>Checked OUT</small><b id="checkoutOutTime">—</b></div>
+        </div>
+        <p id="checkoutMessage" class="muted">Your checkout time is calculated from your actual IN time.</p>
+        <button id="checkoutBtn" class="btn btn-primary btn-block" disabled>Check out</button>
+        <small class="muted">Checkout requires precise mobile location inside the office geofence. Identity verification is handled outside this portal through the secure attendance link.</small>
+      </article>
+    </section>
+
+    <section class="panel employee-attendance-panel">
+      <div class="panel-head"><div><p class="eyebrow">READ-ONLY HISTORY</p><h3>My Attendance</h3></div><span class="badge badge-success">Cannot modify</span></div>
+      <div class="filter-grid employee-filter-grid">
+        <label class="field compact"><span>From</span><input id="selfAttendanceStart" type="date"></label>
+        <label class="field compact"><span>To</span><input id="selfAttendanceEnd" type="date"></label>
+        <button id="selfAttendanceApply" class="btn btn-primary">Load attendance</button>
+      </div>
+      <div class="table-wrap"><table class="data-table attendance-table self-attendance-table"><thead><tr><th>Punch</th><th>Date & Time</th><th>Required OUT</th><th>Source</th><th>Office distance</th></tr></thead><tbody id="selfAttendanceBody"></tbody></table></div>
+      <div id="selfAttendanceEmpty" class="empty-state hidden">No attendance records in this period.</div>
+    </section>
+  </main>
+</div>
+<script src="./js/config.js"></script>
+<script src="./js/api-client.js"></script>
+<script type="module" src="./js/employee.js"></script>
+</body>
+</html>

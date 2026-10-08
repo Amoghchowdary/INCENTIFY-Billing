@@ -1,11 +1,14 @@
-(() => {
-'use strict';
-const C=window.INCENTIFY_CONFIG,A=window.incentifyApi;
-function token(){return localStorage.getItem(C.SESSION_KEY)||'';}
-function user(){try{return JSON.parse(localStorage.getItem(C.USER_KEY)||'null')}catch(_){return null}}
-function saveSession(t,u){localStorage.setItem(C.SESSION_KEY,t);localStorage.setItem(C.USER_KEY,JSON.stringify(u||{}));}
-function clearSession(){localStorage.removeItem(C.SESSION_KEY);localStorage.removeItem(C.USER_KEY);}
-async function validate(){const t=token();if(!t)return null;try{const r=await A.call('sessionInfo',{token:t},15000);localStorage.setItem(C.USER_KEY,JSON.stringify(r.user||{}));return r.user||null;}catch(_){clearSession();return null;}}
-async function logout(){const t=token();try{if(t)await A.call('logout',{token:t,userAgent:navigator.userAgent});}catch(_){}clearSession();location.href='index.html';}
-window.IncentifyAuth={token,user,saveSession,clearSession,validate,logout,require:async()=>{const u=await validate();if(!u){location.replace('index.html');throw new Error('Authentication required');}return u;},requireAdmin:async()=>{const u=await validate();if(!u||u.role!=='ADMIN'){location.replace(u?'erp.html':'index.html');throw new Error('Administrator access required');}return u;}};
-})();
+const cfg = window.INCENTIFY_EMS_CONFIG;
+const api = window.incentifyEmsApi;
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+let portal = 'admin';
+const userAgent = () => navigator.userAgent.slice(0,480);
+function setStatus(msg,type=''){const e=$('#loginStatus');e.textContent=msg;e.className='form-status '+type;}
+function setBusy(btn,busy,label){if(!btn)return;if(busy){btn.dataset.old=btn.textContent;btn.disabled=true;btn.textContent=label||'Working…';}else{btn.disabled=false;btn.textContent=btn.dataset.old||btn.textContent;}}
+function clearSession(){sessionStorage.removeItem(cfg.SESSION_KEY);sessionStorage.removeItem(cfg.USER_KEY);}
+function setPortal(next){portal=next;$$('.portal-choice').forEach(b=>b.classList.toggle('active',b.dataset.portalChoice===portal));const n=$('#portalNotice');if(portal==='employee'){n.innerHTML='<b>Employee Portal</b><p>View only your own attendance and complete location-verified checkout after your shift. Check-in happens from the secure email attendance link.</p>';}else{n.innerHTML='<b>Admin Portal</b><p>Manage employees, attendance links, holidays, late-arrival concessions, reports, access and system settings.</p>';}setStatus(`Selected ${portal==='employee'?'Employee':'Admin'} Login.`);}
+async function sendOtp(){const email=$('#loginEmail').value.trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(email)){setStatus('Enter a valid authorized email address.','error');return;}const btn=$('#sendOtpBtn');setBusy(btn,true,'Sending code…');try{const r=await api.call('requestOtp',{email,portal,userAgent:userAgent()});setStatus(r.message||'Verification code sent.','success');$('#loginOtp').focus();}catch(e){setStatus(e.message,'error');}finally{setBusy(btn,false);}}
+async function verifyOtp(){const email=$('#loginEmail').value.trim().toLowerCase(),code=$('#loginOtp').value.replace(/\D/g,'');if(!/^\d{6}$/.test(code)){setStatus('Enter the 6-digit verification code.','error');return;}const btn=$('#verifyOtpBtn');setBusy(btn,true,'Verifying…');try{const r=await api.call('verifyOtp',{email,code,portal,userAgent:userAgent()});sessionStorage.setItem(cfg.SESSION_KEY,r.sessionToken);sessionStorage.setItem(cfg.USER_KEY,JSON.stringify(r.user||{}));location.replace(r.portal==='employee'?'./employee.html':'./admin.html');}catch(e){setStatus(e.message,'error');}finally{setBusy(btn,false);}}
+async function init(){clearSession();$$('[data-portal-choice]').forEach(b=>b.addEventListener('click',()=>setPortal(b.dataset.portalChoice)));$('#sendOtpBtn').addEventListener('click',sendOtp);$('#verifyOtpBtn').addEventListener('click',verifyOtp);$('#loginOtp').addEventListener('keydown',e=>{if(e.key==='Enter')verifyOtp();});if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});try{const h=await api.call('health',{},20000);setStatus(`V14 backend ${h.status} • V${h.version}`,h.status==='ONLINE'?'success':'error');}catch(e){setStatus(e.message,'error');}}
+init();

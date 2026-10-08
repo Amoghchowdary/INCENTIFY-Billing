@@ -1,24 +1,15 @@
-# INCENTIFY ERP Web — Frontend v6.1.0
+# INCENTIFY EMS V14 GitHub Frontend
 
-Production GitHub Pages frontend for **INCENTIFY Private Limited**.
+Pages:
+- `index.html` — role login
+- `admin.html` — employee, attendance, holiday calendar, concessions, reports, access, settings
+- `employee.html` — profile, read-only attendance, shift checkout
+- `attendance.html` — secure email-link face + geolocation attendance capture
 
-## Backend
+V14 removes face-recognition UI from both Admin and Employee portals. Face verification occurs only on the short-lived attendance/enrollment link.
 
-Apps Script URL:
-`https://script.google.com/macros/s/AKfycbzaJhod-iShRt5UFT-Qn81rqsjOLtpH3vCUvXjKPIk-350ey72AkwC4q67DsKkDu0o-/exec`
-
-Required backend release: **6.1.0**, schema **5**, status **ONLINE**.
-
-V6 intentionally keeps the existing schema-5 backend storage so current Drive/Sheets production data is preserved.
-
-## Access
-
-- ADMIN: full ERP + admin portal.
-- SALES: Create Invoice, Manage Invoices, Payment Tracking only.
-
-## Verify
-
-Run `node .\scripts\verify-frontend.js`.
-Expected final line: `INCENTIFY GitHub frontend v6.1.0 verification passed.`
-
-The Git deployer also refuses to push until the live Apps Script backend reports v6.1.0 and the bridge handshake markers are present.
+Configure a fresh Apps Script `/exec` URL:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\set-api-url.ps1 -Url "YOUR_V14_EXEC_URL"
+node .\scripts\verify-v14.mjs
+```

@@ -1,6 +1,17 @@
-*.log
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+*.log
 .env
 .env.*
-secrets.*
+node_modules/
+dist/
+# Never commit exported employee/attendance/biometric data.
+data/
+exports/
+backups/
+*.db
+*.sqlite
+*.sqlite3
+migration_payload*.json
