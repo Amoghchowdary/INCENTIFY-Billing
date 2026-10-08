@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b477a">
-  <meta name="description" content="INCENTIFY EMS V16.2 Admin Portal — attendance links, holidays, concessions and workforce control.">
+  <meta name="description" content="INCENTIFY EMS V17 Admin Portal — attendance links, holidays, concessions and workforce control.">
   <meta name="robots" content="noindex,nofollow">
   <title>INCENTIFY EMS — Admin Portal</title>
   <link rel="icon" href="./assets/icon-192.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./css/app.css?v=16.2.0">
+  <link rel="stylesheet" href="./css/app.css?v=17.0.0">
 </head>
 <body data-portal="admin">
 <div id="toastStack" class="toast-stack" aria-live="polite"></div>
@@ -146,6 +146,16 @@
 
     <section id="page-access" class="page">
       <article class="panel">
+        <div class="panel-head"><div><p class="eyebrow">ADMINISTRATOR ACCESS</p><h3>Add Admin / Staff Account</h3><p class="muted">Only an ADMIN can create another ADMIN, HR, or MANAGER account. The new user signs in with an email OTP.</p></div></div>
+        <div class="form-grid two-col">
+          <label class="field"><span>Name</span><input id="accessNewName" autocomplete="name" placeholder="Full name"></label>
+          <label class="field"><span>Email</span><input id="accessNewEmail" type="email" autocomplete="email" placeholder="name@company.com"></label>
+          <label class="field"><span>Role</span><select id="accessNewRole"><option value="ADMIN">ADMIN</option><option value="HR">HR</option><option value="MANAGER">MANAGER</option></select></label>
+          <div class="field action-field"><span>&nbsp;</span><button id="createAccessUserBtn" class="btn btn-primary">Add authorized account</button></div>
+        </div>
+        <small class="muted">Employee accounts are created from Employee Management and cannot be promoted here.</small>
+      </article>
+      <article class="panel">
         <div class="panel-head"><div><p class="eyebrow">PORTAL ACCESS</p><h3>Authorized Accounts</h3></div><button id="toggleAccessBtn" class="btn btn-danger" disabled>Disable selected access</button></div>
         <div id="selectedAccessBar" class="selection-bar"><b>No account selected</b><span>Select an account.</span></div>
         <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Employee</th><th>Status</th><th>Last login</th></tr></thead><tbody id="accessTableBody"></tbody></table></div>
@@ -207,8 +217,8 @@
   </form>
 </dialog>
 
-<script src="./js/config.js?v=16.2.0"></script>
-<script src="./js/api-client.js?v=16.2.0"></script>
-<script type="module" src="./js/admin.js?v=16.2.0"></script>
+<script src="./js/config.js?v=17.0.0"></script>
+<script src="./js/api-client.js?v=17.0.0"></script>
+<script type="module" src="./js/admin.js?v=17.0.0"></script>
 </body>
 </html>

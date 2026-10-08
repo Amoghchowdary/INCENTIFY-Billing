@@ -6,12 +6,12 @@ $root = Split-Path -Parent $PSScriptRoot
 $configPath = Join-Path $root 'js\config.js'
 $url = $Url.Trim()
 if (-not ($url -match '^https://script\.google\.com/macros/s/.+/exec$')) {
-  throw 'Use the V16 Google Apps Script Web App URL ending in /exec.'
+  throw 'Use the V17 Google Apps Script Web App URL ending in /exec.'
 }
 $text = Get-Content -Raw -Path $configPath
 $text = [regex]::Replace($text, "API_URL:\s*'[^']*'", "API_URL: '$url'")
 [System.IO.File]::WriteAllText($configPath, $text, (New-Object System.Text.UTF8Encoding($false)))
-Write-Host 'INCENTIFY EMS V16 API URL configured.' -ForegroundColor Green
+Write-Host 'INCENTIFY EMS V17 API URL configured.' -ForegroundColor Green
 Write-Host $url
-Write-Host 'No Bridge.html or iframe is used in V16.' -ForegroundColor Cyan
+Write-Host 'No Bridge.html or iframe is used in V17.' -ForegroundColor Cyan
 Write-Host 'Commit and push js/config.js to publish the configured GitHub Pages build.' -ForegroundColor Cyan

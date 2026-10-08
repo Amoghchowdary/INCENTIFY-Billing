@@ -1,19 +1,16 @@
-# INCENTIFY EMS V16.2 Frontend
+# INCENTIFY EMS — GitHub Frontend V17.0.0
 
-Production GitHub Pages frontend for INCENTIFY PRIVATE LIMITED.
+Production GitHub Pages frontend for INCENTIFY EMS V17.
 
-Backend change: **NONE**. Keep the already deployed `INCENTIFY EMS V16 Cloud API` backend version `16.0.0`. Do not replace Code.gs for this release.
+Backend: INCENTIFY EMS V17 Cloud API 17.0.0.
 
-V16.2 fixes a V16.1 JSONP callback-namespace mismatch discovered by the live backend test. The V16 backend validates callback names beginning with `__incentify_ems_v16_cb_`; V16.1 incorrectly emitted `__incentify_ems_v16_1_cb_`. V16.2 restores the exact backend-compatible callback namespace while keeping the low-latency JSONP-first transport, fetch fallback for safe/idempotent calls, single-delivery mutations, and transient-404 deployment recovery.
+## V17 frontend changes
+- Admin Portal can create ADMIN, HR, and MANAGER accounts.
+- Access creation remains server-authorized; employee accounts cannot be promoted through this form.
+- Backend processing latency (`serverMs`) is surfaced as diagnostic tooltip text.
+- V17 cache/session/request/callback namespaces prevent stale V16 assets.
+- Existing attendance, holiday, concession, geofence, 8-hour shift, and secure-link face verification flows are preserved.
 
-Local extraction location:
-`C:\Users\MYPC\Desktop\Incentify_EMS\INCENTIFY_EMS_V16_1_GitHub_Frontend`
-
-Permanent Git deployment clone:
-`C:\Users\MYPC\Desktop\Incentify_EMS\Deployment_Folder\INCENTIFY-Billing`
-
-Verify:
-`node .\scripts\verify-v16_2.mjs`
-`node .\scripts\test-api-client-v16_2.mjs`
-`.\scripts\test-v16_2-deployment.ps1`
-`.\scripts\test-v16_2-backend.ps1`
+## Verify
+`node .\scripts\verify-v17.mjs`
+`node .\scripts\test-api-client-v17.mjs`
