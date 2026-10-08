@@ -8,12 +8,11 @@ const fmt=v=>{const d=new Date(v);return isNaN(d)?String(v):d.toLocaleString([],
 async function init(){
   if(!token){status('Invalid link','The attendance token is missing.','error');return}
   try{
-    const h=await api.call('health',{},20000);if(h.status!=='ONLINE')throw new Error('Attendance backend is not online.');
-    const r=await api.call('getAttendanceLinkContext',{attendanceToken:token},30000);state.context=r;
+    const r=await api.call('getAttendanceLinkContext',{attendanceToken:token},20000);state.context=r;
     if(r.state==='USED'){status('Link already used',r.message||'This link has already been used.','success');return}
     $('#captureContent').classList.remove('hidden');$('#linkEmployeeName').textContent=r.employee.fullName;$('#linkEmployeeCode').textContent=r.employee.employeeCode;$('#linkDate').textContent=r.date;$('#linkExpiry').textContent=fmt(r.validUntil);
     status(r.linkType==='ENROLL'?'Face enrollment link':'Attendance link',r.linkType==='ENROLL'?'Verify your office location and capture your face for future attendance.':'This link is active. Complete location and face verification before it expires.','success');
-    $('#linkCheckLocationBtn').onclick=checkLocation;$('#linkCaptureBtn').onclick=captureAndSubmit;
+    $('#linkCheckLocationBtn').onclick=checkLocation;$('#linkCaptureBtn').onclick=captureAndSubmit;const warm=()=>models().catch(()=>{});if('requestIdleCallback'in window)requestIdleCallback(warm,{timeout:1200});else setTimeout(warm,350);
   }catch(e){status('Attendance link unavailable',e.message,'error')}
 }
 function preciseLocation(){return new Promise((resolve,reject)=>{if(!navigator.geolocation)return reject(new Error('Location is not supported by this browser.'));navigator.geolocation.getCurrentPosition(p=>resolve({latitude:Number(p.coords.latitude),longitude:Number(p.coords.longitude),accuracy:Number(p.coords.accuracy),capturedAt:new Date().toISOString()}),e=>reject(new Error(e.code===1?'Allow precise location to continue.':(e.message||'Could not read your location.'))),{enableHighAccuracy:true,timeout:15000,maximumAge:0})})}
