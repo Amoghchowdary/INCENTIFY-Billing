@@ -11,13 +11,24 @@
         'bootstrapAdmin','bootstrapEmployee','dashboard','listEmployees',
         'listAttendance','getSettings','listAccessUsers','listHolidays',
         'listAttendanceExceptions','getMyAttendance','getMyCheckoutStatus',
-        'getAttendanceLinkContext','mailDiagnostics','listMailLog','listSystemRuns'
+        'getAttendanceLinkContext','mailDiagnostics','listMailLog','listSystemRuns',
+        'requestReplayStatus'
       ]);
+      // V19 persists successful mutation results by requestId in REQUEST_REPLAYS.
+      // Repeating the same logical request after a lost browser response returns
+      // the stored result instead of duplicating the mutation.
+      this.replaySafeMutationActions = new Set([
+        'createEmployee','updateEmployee','deleteEmployee','sendEnrollmentLink','deleteAttendance',
+        'saveSettings','exportAttendanceXlsx','createCloudBackup','checkoutMyAttendance',
+        'saveHoliday','deleteHoliday','createLateConcession','resendTodayAttendanceLink',
+        'submitAttendanceLinkFace','createAccessUser','setAccessStatus','deleteAccessUser','sendTestEmail'
+      ]);
+      this.inflightSafe = new Map();
     }
 
     isConfigured() {
       return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/i.test(this.baseUrl)
-        && !this.baseUrl.includes('PASTE_NEW_V18_APPS_SCRIPT');
+        && !this.baseUrl.includes('PASTE_NEW_V19_APPS_SCRIPT');
     }
 
     waitReady(timeout = 12000) {
@@ -61,24 +72,24 @@
       } else {
         for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
       }
-      return `ems18_${Date.now()}_${[...bytes].map(b => b.toString(16).padStart(2, '0')).join('')}`;
+      return `ems19_${Date.now()}_${[...bytes].map(b => b.toString(16).padStart(2, '0')).join('')}`;
     }
 
     _callbackName(attempt) {
       const suffix = `${Date.now()}_${++this.seq}_${attempt}_${Math.random().toString(36).slice(2)}`.replace(/[^A-Za-z0-9_]/g, '');
-      return `__incentify_ems_v18_cb_${suffix}`;
+      return `__incentify_ems_v19_cb_${suffix}`;
     }
 
     _jsonUrl(encoded, attempt) {
       const sep = this.baseUrl.includes('?') ? '&' : '?';
       const nonce = `${Date.now()}_${attempt}_${Math.random().toString(36).slice(2)}`;
-      return `${this.baseUrl}${sep}api=1&payload=${encodeURIComponent(encoded)}&v=${encodeURIComponent(window.INCENTIFY_EMS_CONFIG.BACKEND_VERSION || '18.0.0')}&transport=json&retry=${attempt}&_=${encodeURIComponent(nonce)}`;
+      return `${this.baseUrl}${sep}api=1&payload=${encodeURIComponent(encoded)}&v=${encodeURIComponent(window.INCENTIFY_EMS_CONFIG.BACKEND_VERSION || '19.0.0')}&transport=json&retry=${attempt}&_=${encodeURIComponent(nonce)}`;
     }
 
     _jsonpUrl(callback, encoded, attempt) {
       const sep = this.baseUrl.includes('?') ? '&' : '?';
       const nonce = `${Date.now()}_${attempt}_${Math.random().toString(36).slice(2)}`;
-      return `${this.baseUrl}${sep}api=1&callback=${encodeURIComponent(callback)}&payload=${encodeURIComponent(encoded)}&v=${encodeURIComponent(window.INCENTIFY_EMS_CONFIG.BACKEND_VERSION || '18.0.0')}&transport=jsonp&retry=${attempt}&_=${encodeURIComponent(nonce)}`;
+      return `${this.baseUrl}${sep}api=1&callback=${encodeURIComponent(callback)}&payload=${encodeURIComponent(encoded)}&v=${encodeURIComponent(window.INCENTIFY_EMS_CONFIG.BACKEND_VERSION || '19.0.0')}&transport=jsonp&retry=${attempt}&_=${encodeURIComponent(nonce)}`;
     }
 
     async _fetchOnce(encoded, timeout, attempt) {
@@ -143,46 +154,111 @@
       for (let attempt = 1; attempt <= this.maxSafeAttempts; attempt++) {
         const remaining = timeout - (Date.now() - startedAt);
         if (remaining <= 0) break;
-        const perTransportTimeout = Math.max(3500, Math.min(8000, Math.floor(remaining / 2) || remaining));
-
-        // JSONP is the primary browser transport in V18 because it avoids the
-        // Apps Script CORS/redirect instability observed in V14/V15.
+        const perTransportTimeout = Math.max(3500, Math.min(8500, Math.floor(remaining / 2) || remaining));
         try { return await this._jsonpOnce(encoded, perTransportTimeout, attempt); }
         catch (error) {
           const code = String(error && error.code || '');
           if (code !== 'NETWORK_ERROR' && code !== 'TIMEOUT') throw error;
           lastError = error;
         }
-
         try { return await this._fetchOnce(encoded, perTransportTimeout, attempt); }
         catch (error) {
           const code = String(error && error.code || '');
           if (code !== 'NETWORK_ERROR' && code !== 'TIMEOUT') throw error;
           lastError = error;
         }
-
-        if (attempt < this.maxSafeAttempts) await this._sleep(150 * attempt);
+        if (attempt < this.maxSafeAttempts) await this._sleep(180 * attempt);
       }
-      const finalError = this._networkError('Could not reach the INCENTIFY EMS V18 API. Please retry once.');
+      const finalError = this._networkError('Could not reach the INCENTIFY EMS V19 backend after automatic recovery attempts.');
       finalError.cause = lastError || undefined;
       throw finalError;
     }
 
-    async _singleDeliveryTransport(encoded, timeout) {
-      // Mutating operations are delivered once only. JSONP is used as the
-      // primary delivery path to avoid browser CORS latency and redirect errors.
-      return this._jsonpOnce(encoded, Math.min(timeout, 15000), 1);
+    async _probeMutation(requestId, action, timeout = 9000) {
+      const encoded = this._encode({action:'requestReplayStatus', requestId, actionName:action});
+      try {
+        const response = await this._safeTransport(encoded, timeout);
+        return response && response.found ? this._serverResult(response.result) : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async _replaySafeMutationTransport(encoded, timeout, requestId, action) {
+      const startedAt = Date.now();
+      let lastError = null;
+      const remaining = () => Math.max(0, timeout - (Date.now() - startedAt));
+      const isFace = action === 'submitAttendanceLinkFace';
+      const firstTimeout = isFace ? 28000 : 14000;
+      const fallbackTimeout = isFace ? 18000 : 10000;
+
+      try {
+        return await this._jsonpOnce(encoded, Math.min(firstTimeout, Math.max(5000, remaining())), 1);
+      } catch (error) {
+        const code = String(error && error.code || '');
+        if (code !== 'NETWORK_ERROR' && code !== 'TIMEOUT') throw error;
+        lastError = error;
+      }
+
+      const replayAfterFirst = await this._probeMutation(requestId, action, Math.min(8000, Math.max(3500, remaining())));
+      if (replayAfterFirst) return replayAfterFirst;
+
+      if (remaining() > 4000) {
+        await this._sleep(220);
+        try {
+          return await this._fetchOnce(encoded, Math.min(fallbackTimeout, Math.max(4000, remaining())), 2);
+        } catch (error) {
+          const code = String(error && error.code || '');
+          if (code !== 'NETWORK_ERROR' && code !== 'TIMEOUT') throw error;
+          lastError = error;
+        }
+      }
+
+      const replayAfterFetch = await this._probeMutation(requestId, action, Math.min(7000, Math.max(3000, remaining())));
+      if (replayAfterFetch) return replayAfterFetch;
+
+      if (remaining() > 3500) {
+        await this._sleep(280);
+        try {
+          return await this._jsonpOnce(encoded, Math.min(12000, Math.max(3500, remaining())), 3);
+        } catch (error) {
+          const code = String(error && error.code || '');
+          if (code !== 'NETWORK_ERROR' && code !== 'TIMEOUT') throw error;
+          lastError = error;
+        }
+      }
+
+      const finalReplay = await this._probeMutation(requestId, action, Math.min(6000, Math.max(2500, remaining())));
+      if (finalReplay) return finalReplay;
+
+      const finalError = this._networkError(
+        isFace
+          ? 'Secure face submission could not be confirmed after recovery attempts. Keep this page open and retry once; the backend will not duplicate a completed enrollment.'
+          : 'The request could not be confirmed after automatic recovery attempts. Retrying the same action is safe in V19.'
+      );
+      finalError.cause = lastError || undefined;
+      throw finalError;
     }
 
     async call(action, payload = {}, timeout = 30000) {
-      if (!this.isConfigured()) throw new Error('V18 backend URL is not configured. Set the Apps Script /exec URL in js/config.js.');
+      if (!this.isConfigured()) throw new Error('V19 backend URL is not configured. Set the Apps Script /exec URL in js/config.js.');
+      const a = String(action || '');
       const requestId = this._requestId();
-      const request = { action: String(action || ''), requestId, ...(payload || {}) };
+      const request = { action: a, requestId, ...(payload || {}) };
       const encoded = this._encode(request);
-      if (encoded.length > 11000) throw new Error('Request payload is too large for the V18 browser API transport.');
-      return this.safeRetryActions.has(String(action || ''))
-        ? this._safeTransport(encoded, timeout)
-        : this._singleDeliveryTransport(encoded, timeout);
+      if (encoded.length > 11000) throw new Error('Request payload is too large for the V19 browser API transport.');
+
+      // Coalesce identical health/bootstrap reads started in the same UI tick.
+      if (this.safeRetryActions.has(a) && ['health','bootstrapAdmin','bootstrapEmployee'].includes(a)) {
+        const key = `${a}:${payload && payload.token ? String(payload.token).slice(0,24) : ''}`;
+        if (this.inflightSafe.has(key)) return this.inflightSafe.get(key);
+        const promise = this._safeTransport(encoded, timeout).finally(() => this.inflightSafe.delete(key));
+        this.inflightSafe.set(key, promise);
+        return promise;
+      }
+      if (this.safeRetryActions.has(a)) return this._safeTransport(encoded, timeout);
+      if (this.replaySafeMutationActions.has(a)) return this._replaySafeMutationTransport(encoded, timeout, requestId, a);
+      return this._jsonpOnce(encoded, Math.min(timeout, 18000), 1);
     }
   }
 

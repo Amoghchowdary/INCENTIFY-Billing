@@ -1,0 +1,90 @@
+INCENTIFY EMS V19 — PREVIOUS BUG REGRESSION MATRIX
+==================================================
+
+FIXED / GUARDED IN V19
+----------------------
+[1] Employee Cancel/X not closing
+    - Custom application modal, explicit Cancel/X/Escape/backdrop handlers.
+
+[2] Toast/notification appearing behind blurred modal
+    - Application modal and toast layers separated; inline modal errors used for form failures.
+
+[3] Add/Delete Admin/Staff incomplete or unsafe
+    - Dedicated ADMIN/HR/MANAGER modal; enable/disable/delete APIs; primary/current/last-admin protections.
+
+[4] Email failures had no useful diagnosis
+    - Mail Health, effective sender, quota, test email, MAIL_LOG with SENT/FAILED + error.
+
+[5] Apps Script execution had no useful business description
+    - SYSTEM_RUNS persists function/status/description/details and is visible in Admin.
+
+[6] Attendance time setting produced "Invalid date or time setting"
+    - Sheet display-value read + HH:mm/HH:mm:ss/AM-PM/fractional-time normalization and repair.
+
+[7] Attendance email URL returned GitHub Pages 404 after repository rename
+    - Backend pins public base to https://amoghchowdary.github.io/INCENTIFY_EMS.
+    - Settings public route fields are read-only.
+    - Attendance URL builder ignores stale configurable repository paths.
+
+[8] Apps Script intermittent 404/JSONP timeout
+    - Safe reads use JSONP primary + fetch fallback + controlled retry.
+    - Deployment gates retry transient failures before failing.
+
+[9] Face enrollment timed out after backend may already have saved
+    - Persistent request replay + secure-link RESULT_JSON recovery.
+    - Refresh of used link can display already-completed result.
+
+[10] Replaying employee/admin/mail mutations after response loss could duplicate work
+     - REQUEST_REPLAYS persists successful critical mutation results for 24 hours.
+     - Browser probes requestReplayStatus before re-delivery.
+     - Same logical requestId is reused across fallback transports.
+
+[11] Employee email change could corrupt login linkage
+     - New login sync occurs before old email is disabled; rollback on sync failure.
+
+[12] Duplicate/stale daily attendance links
+     - Existing active SENT link is reused/skipped; already checked-in employees skipped.
+     - New link supersedes old active link when replacement is required.
+
+[13] Daily Apps Script trigger fires before 10:00
+     - V19 schedules a one-time window-open retry instead of sending an early link.
+
+[14] Daily trigger/manual run after 10:30 could send stale links
+     - WINDOW_ALREADY_CLOSED guard prevents stale delivery.
+
+[15] Sunday/public holiday mail spam
+     - Sunday automatic closure + configured holiday workday guard before email generation.
+
+[16] Checkout before full shift
+     - Earliest OUT remains actual IN + configured 480 minutes.
+
+[17] Face recognition exposed in Admin/Employee portals
+     - Legacy Admin face APIs removed; normal portals contain no camera.
+     - Secure attendance/enrollment page is the only biometric UI.
+
+[18] Old blocking browser alert/prompt/confirm UX
+     - Removed from portal flows; custom inline/modal confirmation UI is used.
+
+[19] Frontend startup latency from redundant reads
+     - bootstrap health/session duplication removed; identical startup reads coalesced.
+
+[20] Backend latency from repeated Sheet/settings reads
+     - per-request Sheet cache, warm DB/settings cache, session-touch throttling and batched writes.
+
+[21] V18.1 verification falsely rejected a valid JSONP payload because of cosmetic service name
+     - V19 verifier validates the exact V19 health contract and parses JSONP payload structurally.
+
+STATIC/LOCAL RELEASE GATES
+--------------------------
+- Backend syntax.
+- Backend structural/regression verification.
+- Time-setting unit tests.
+- Frontend JS syntax.
+- Frontend structural/regression verification.
+- API-client transport/replay unit tests.
+- Duplicate HTML ID check.
+- Native blocking-dialog scan.
+- Stale public GitHub Pages URL scan.
+- Local HTTP asset/page smoke check.
+
+LIVE-only validation still requires the deployed Google Apps Script runtime and GitHub Pages environment.
