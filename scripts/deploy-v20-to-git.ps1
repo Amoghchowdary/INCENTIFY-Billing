@@ -1,12 +1,12 @@
 param(
-  [string]$Source = "C:\Users\MYPC\Desktop\Incentify_EMS\INCENTIFY_EMS_V19_GitHub_Frontend",
+  [string]$Source = "C:\Users\MYPC\Desktop\Incentify_EMS\INCENTIFY_EMS_V20_GitHub_Frontend",
   [string]$DeploymentRoot = "C:\Users\MYPC\Desktop\Incentify_EMS\Deployment_Folder"
 )
 
 $ErrorActionPreference = 'Stop'
 
-if (-not (Test-Path "$Source\scripts\verify-v19.mjs")) {
-  throw "V19 source not found: $Source"
+if (-not (Test-Path "$Source\scripts\verify-v20.mjs")) {
+  throw "V20 source not found: $Source"
 }
 if (-not (Test-Path $DeploymentRoot)) {
   throw "Deployment root not found: $DeploymentRoot"
@@ -35,15 +35,15 @@ function Resolve-GitDeploymentClone {
 }
 
 $Destination = Resolve-GitDeploymentClone $DeploymentRoot
-Write-Host "V19 source:      $Source" -ForegroundColor Cyan
+Write-Host "V20 source:      $Source" -ForegroundColor Cyan
 Write-Host "Git destination: $Destination" -ForegroundColor Cyan
 
 Push-Location $Source
 try {
-  node .\scripts\verify-v19.mjs
-  if ($LASTEXITCODE -ne 0) { throw 'V19 frontend verification failed.' }
-  node .\scripts\test-api-client-v19.mjs
-  if ($LASTEXITCODE -ne 0) { throw 'V19 API-client unit tests failed.' }
+  node .\scripts\verify-v20.mjs
+  if ($LASTEXITCODE -ne 0) { throw 'V20 frontend verification failed.' }
+  node .\scripts\test-api-client-v20.mjs
+  if ($LASTEXITCODE -ne 0) { throw 'V20 API-client unit tests failed.' }
 } finally { Pop-Location }
 
 robocopy $Source $Destination /MIR /XD .git /R:2 /W:1
@@ -52,12 +52,12 @@ if ($rc -ge 8) { throw "Robocopy failed with exit code $rc" }
 
 Push-Location $Destination
 try {
-  node .\scripts\verify-v19.mjs
-  if ($LASTEXITCODE -ne 0) { throw 'Deployment-copy V19 verification failed.' }
+  node .\scripts\verify-v20.mjs
+  if ($LASTEXITCODE -ne 0) { throw 'Deployment-copy V20 verification failed.' }
   Write-Host ''
   Write-Host 'Deployment copy verified. Review Git status before committing:' -ForegroundColor Green
   git status
 } finally { Pop-Location }
 
 Write-Host ''
-Write-Host 'V19 files copied successfully. This script intentionally does NOT git add/commit/push.' -ForegroundColor Green
+Write-Host 'V20 files copied successfully. This script intentionally does NOT git add/commit/push.' -ForegroundColor Green

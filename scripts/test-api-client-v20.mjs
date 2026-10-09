@@ -3,7 +3,7 @@ import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../js/api-client.js', import.meta.url), 'utf8');
 const sandbox = {
-  window: { INCENTIFY_EMS_CONFIG: { API_URL: 'https://script.google.com/macros/s/TEST/exec', BACKEND_VERSION: '19.0.0' } },
+  window: { INCENTIFY_EMS_CONFIG: { API_URL: 'https://script.google.com/macros/s/TEST/exec', BACKEND_VERSION: '20.0.0' } },
   document: { createElement: () => ({}), head: { appendChild() {} } },
   globalThis: null,
   crypto: globalThis.crypto,
@@ -31,7 +31,7 @@ const networkError = (code = 'NETWORK_ERROR') => { const e = new Error(code); e.
 {
   const c = new Client(sandbox.window.INCENTIFY_EMS_CONFIG.API_URL);
   let jsonp = 0, fetches = 0;
-  c._jsonpOnce = async () => { jsonp++; return { success: true, version: '19.0.0' }; };
+  c._jsonpOnce = async () => { jsonp++; return { success: true, version: '20.0.0' }; };
   c._fetchOnce = async () => { fetches++; return { success: true }; };
   await c.call('health');
   add(jsonp === 1 && fetches === 0, 'safe read uses JSONP primary without unnecessary fetch');
@@ -42,7 +42,7 @@ const networkError = (code = 'NETWORK_ERROR') => { const e = new Error(code); e.
   const c = new Client(sandbox.window.INCENTIFY_EMS_CONFIG.API_URL);
   let jsonp = 0, fetches = 0;
   c._jsonpOnce = async () => { jsonp++; throw networkError('NETWORK_ERROR'); };
-  c._fetchOnce = async () => { fetches++; return { success: true, version: '19.0.0' }; };
+  c._fetchOnce = async () => { fetches++; return { success: true, version: '20.0.0' }; };
   await c.call('health');
   add(jsonp === 1 && fetches === 1, 'safe read falls back to fetch after JSONP network failure');
 }
@@ -107,16 +107,16 @@ const networkError = (code = 'NETWORK_ERROR') => { const e = new Error(code); e.
     attendanceToken: 'secure-token',
     descriptor: new Array(128).fill(0.1),
     livenessPassed: true,
-    location: { latitude: 17.4983333, longitude: 78.3843889 }
+    location: { latitude: 17.4982778, longitude: 78.3845000 }
   }, 70000);
   add(jsonp === 1 && fetches === 0 && probes === 1 && result.action === 'ENROLLED', 'secure face mutation recovers persisted completion after JSONP timeout');
 }
 
-// 7. Client IDs/callback namespace match V19 backend validation contract.
+// 7. Client IDs/callback namespace match V20 backend validation contract.
 {
   const c = new Client(sandbox.window.INCENTIFY_EMS_CONFIG.API_URL);
-  add(/^ems19_[A-Za-z0-9_-]{16,120}$/.test(c._requestId()), 'V19 request IDs match backend validation contract');
-  add(/^__incentify_ems_v19_cb_[A-Za-z0-9_]+$/.test(c._callbackName(1)), 'V19 JSONP callback matches backend validation contract');
+  add(/^ems20_[A-Za-z0-9_-]{16,120}$/.test(c._requestId()), 'V20 request IDs match backend validation contract');
+  add(/^__incentify_ems_v20_cb_[A-Za-z0-9_]+$/.test(c._callbackName(1)), 'V20 JSONP callback matches backend validation contract');
 }
 
 // 8. Payload encoder is functional for real API requests.
@@ -145,4 +145,4 @@ const networkError = (code = 'NETWORK_ERROR') => { const e = new Error(code); e.
 for (const check of checks) console.log(`${check.ok ? 'PASS' : 'FAIL'}: ${check.name}`);
 const failed = checks.filter(x => !x.ok);
 if (failed.length) process.exit(1);
-console.log(`\nV19 API client unit tests passed: ${checks.length} checks.`);
+console.log(`\nV20 API client unit tests passed: ${checks.length} checks.`);
